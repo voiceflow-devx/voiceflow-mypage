@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>マイページ - 経費記録</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f5f5f5;
+            color: #333;
+        }
+        .header {
+            background: #06C755;
+            color: white;
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .header h1 { font-size: 18px; font-weight: bold; }
+        .header .user-info { font-size: 12px; opacity: 0.9; }
+        .nav {
+            display: flex;
+            background: white;
+            border-bottom: 1px solid #eee;
+            overflow-x: auto;
+        }
+        .nav button {
+            flex: 1;
+            padding: 12px 8px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-size: 13px;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            white-space: nowrap;
+            min-width: 80px;
+        }
+        .nav button.active {
+            color: #06C755;
+            border-bottom-color: #06C755;
+            font-weight: bold;
+        }
+        .container { padding: 16px; max-width: 800px; margin: 0 auto; }
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+        }
+        .card h2 { font-size: 15px; color: #666; margin-bottom: 12px; }
+        .total-amount {
+            font-size: 32px;
+            font-weight: bold;
+            color: #06C755;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 14px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+            text-align: center;
+        }
+        .stat-card .label { font-size: 12px; color: #999; margin-bottom: 4px; }
+        .stat-card .value { font-size: 20px; font-weight: bold; color: #333; }
+        .filter-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+        .filter-row select {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 13px;
+            background: white;
+        }
+        .record-item {
+            border-bottom: 1px solid #f0f0f0;
+            padding: 12px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .record-item:last-child { border-bottom: none; }
+        .record-info .store { font-weight: bold; font-size: 14px; }
+        .record-info .detail { font-size: 12px; color: #999; margin-top: 2px; }
+        .record-amount { font-weight: bold; font-size: 15px; color: #333; }
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            background: #e8f5e9;
+            color: #06C755;
+            margin-top: 4px;
+        }
+        .export-btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-bottom: 12px;
+        }
+        .btn-csv { background: #4CAF50; color: white; }
+        .btn-excel { background: #217346; color: white; }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        .page { display: none; }
+        .page.active { display: block; }
+        .month-selector {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .month-selector button {
+            padding: 6px 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .month-selector span {
+            font-size: 16px;
+            font-weight: bold;
+            min-width: 100px;
+            text-align: center;
+        }
+        .login-page {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .login-card {
+            background: white;
+            border-radius: 16px;
+            padding: 40px 32px;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            max-width: 360px;
+            width: 100%;
+        }
+        .login-card h1 { font-size: 22px; margin-bottom: 8px; }
+        .login-card p { color: #666; margin-bottom: 32px; font-size: 14px; }
+        .login-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            padding: 14px;
+            background: #06C755;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .login-btn:hover { background: #05b34b; }
+    </style>
+</head>
+<body>
+
+<!-- ログインページ -->
+<div id="loginPage" class="login-page">
+    <div class="login-card">
+        <h1>📊 経費マイページ</h1>
+        <p>LINEアカウントでログインして<br>経費データを確認できます</p>
+        <button class="login-btn" onclick="loginWithLine()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
+            </svg>
+            LINEでログイン
+        </button>
+    </div>
+</div>
+
+<!-- メインページ -->
+<div id="mainPage" style="display:none;">
+    <div class="header">
+        <h1>📊 経費マイページ</h1>
+        <div class="user-info" id="userInfo"></div>
+    </div>
+
+    <div class="nav">
+        <button class="active" onclick="showPage('home', this)">ホーム</button>
+        <button onclick="showPage('records', this)">一覧</button>
+        <button onclick="showPage('chart', this)">グラフ</button>
+        <button onclick="showPage('export', this)">出力</button>
+        <button onclick="showPage('settings', this)">設定</button>
+    </div>
+
+    <div class="container">
+
+        <!-- ホーム -->
+        <div id="homePage" class="page active">
+            <div class="month-selector">
+                <button onclick="changeMonth(-1)">◀</button>
+                <span id="currentMonthLabel"></span>
+                <button onclick="changeMonth(1)">▶</button>
+            </div>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="label">今月の合計</div>
+                    <div class="value" id="monthTotal">-</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">今月の件数</div>
+                    <div class="value" id="monthCount">-</div>
+                </div>
+            </div>
+            <div class="card">
+                <h2>勘定科目別</h2>
+                <canvas id="homeChart" height="200"></canvas>
+            </div>
+            <div class="card">
+                <h2>最近の登録</h2>
+                <div id="recentList"><div class="loading">読み込み中...</div></div>
+            </div>
+        </div>
+
+        <!-- 一覧 -->
+        <div id="recordsPage" class="page">
+            <div class="filter-row">
+                <select id="filterMonth" onchange="loadRecords()">
+                    <option value="">すべての月</option>
+                </select>
+                <select id="filterAccount" onchange="loadRecords()">
+                    <option value="">すべての科目</option>
+                </select>
+            </div>
+            <div class="card">
+                <div id="recordsList"><div class="loading">読み込み中...</div></div>
+            </div>
+        </div>
+
+        <!-- グラフ -->
+        <div id="chartPage" class="page">
+            <div class="card">
+                <h2>月別合計推移</h2>
+                <canvas id="monthlyChart" height="200"></canvas>
+            </div>
+            <div class="card">
+                <h2>勘定科目別内訳</h2>
+                <canvas id="accountChart" height="200"></canvas>
+            </div>
+        </div>
+
+        <!-- 出力 -->
+        <div id="exportPage" class="page">
+            <div class="card">
+                <h2>データ出力</h2>
+                <div class="filter-row">
+                    <select id="exportMonth">
+                        <option value="">すべての月</option>
+                    </select>
+                </div>
+                <button class="export-btn btn-csv" onclick="exportCSV()">
+                    📄 CSVダウンロード
+                </button>
+                <button class="export-btn btn-excel" onclick="exportExcel()">
+                    📊 Excelダウンロード
+                </button>
+            </div>
+        </div>
+
+        <!-- 設定 -->
+        <div id="settingsPage" class="page">
+            <div class="card">
+                <h2>アカウント設定</h2>
+                <p style="font-size:13px; color:#666; margin-bottom:16px;">
+                    設定変更はLINEのボットからも行えます
+                </p>
+                <div style="margin-bottom:16px;">
+                    <label style="font-size:13px; color:#666;">用途</label>
+                    <select id="usageSetting" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; margin-top:4px; font-size:14px;">
+                        <option value="business">仕事・事業</option>
+                        <option value="household">家計簿</option>
+                    </select>
+                </div>
+                <div style="margin-bottom:16px;">
+                    <label style="font-size:13px; color:#666;">表示方法</label>
+                    <select id="displaySetting" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; margin-top:4px; font-size:14px;">
+                        <option value="account">勘定科目（確定申告向け）</option>
+                        <option value="category">カテゴリ（かんたん表示）</option>
+                    </select>
+                </div>
+                <button onclick="saveSettings()" style="width:100%; padding:12px; background:#06C755; color:white; border:none; border-radius:10px; font-size:15px; font-weight:bold; cursor:pointer;">
+                    保存する
+                </button>
+            </div>
+            <div class="card">
+                <h2>プラン</h2>
+                <p id="planInfo" style="font-size:14px; margin-bottom:12px;"></p>
+                <button id="upgradeBtn" onclick="upgradePlan()" style="width:100%; padding:12px; background:#FF6B35; color:white; border:none; border-radius:10px; font-size:15px; font-weight:bold; cursor:pointer; display:none;">
+                    有料プランにアップグレード（月額980円）
+                </button>
+            </div>
+            <div class="card">
+                <button onclick="logout()" style="width:100%; padding:12px; background:#f5f5f5; color:#666; border:none; border-radius:10px; font-size:15px; cursor:pointer;">
+                    ログアウト
+                </button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    // ===== Supabase設定 =====
+    const SUPABASE_URL = 'https://ewmxcvyrfqdhujcldrca.supabase.co'
+    const SUPABASE_KEY = 'sb_publishable_p4BmWWdsN6bQ-0zjozrnNQ_IjUBJSeo'
+    const LINE_CHANNEL_ID = '2009932393'
+
+    const { createClient } = supabase
+    const db = createClient(SUPABASE_URL, SUPABASE_KEY)
+
+    let currentUser = null
+    let allRecords = []
+    let currentMonth = new Date()
+    let homeChartInstance = null
+    let monthlyChartInstance = null
+    let accountChartInstance = null
+
+    // ===== LINE Login =====
+    function loginWithLine() {
+        const redirectUri = encodeURIComponent(window.location.origin + window.location.pathname)
+        const state = Math.random().toString(36).substring(2)
+        localStorage.setItem('line_state', state)
+        const url = `https://access.line.me/oauth2/v2.1/authorize?response_type=code&client_id=${LINE_CHANNEL_ID}&redirect_uri=${redirectUri}&state=${state}&scope=profile%20openid`
+        window.location.href = url
+    }
+
+    // ===== 認証チェック =====
+    async function checkAuth() {
+        const params = new URLSearchParams(window.location.search)
+        const code = params.get('code')
+        const state = params.get('state')
+
+        if (code) {
+            const savedState = localStorage.getItem('line_state')
+            if (state !== savedState) {
+                alert('認証エラーが発生しました')
+                return
+            }
+            await handleLineCallback(code)
+            window.history.replaceState({}, '', window.location.pathname)
+            return
+        }
+
+        const savedUser = localStorage.getItem('line_user')
+        if (savedUser) {
+            currentUser = JSON.parse(savedUser)
+            showMain()
+        } else {
+            document.getElementById('loginPage').style.display = 'flex'
+        }
+    }
+
+    // ===== LINEコールバック処理 =====
+    async function handleLineCallback(code) {
+        try {
+            // ※本来はサーバーサイドでトークン取得が必要
+            // ここでは簡易的にuser_idを手動入力で代替
+            const userId = prompt('LINE User IDを入力してください（開発用）:')
+            if (!userId) return
+
+            currentUser = { userId }
+            localStorage.setItem('line_user', JSON.stringify(currentUser))
+            showMain()
+        } catch (e) {
+            console.error(e)
+            alert('ログインに失敗しました')
+        }
+    }
+
+    // ===== メインページ表示 =====
+    async function showMain() {
+        document.getElementById('loginPage').style.display = 'none'
+        document.getElementById('mainPage').style.display = 'block'
+        document.getElementById('userInfo').textContent = `ID: ${currentUser.userId.substring(0, 8)}...`
+        await loadAllData()
+        updateMonthLabel()
+        await loadHomeData()
+        await loadSettings()
+    }
+
+    // ===== 全データ読み込み =====
+    async function loadAllData() {
+        const { data, error } = await db
+            .from('records')
+            .select('*')
+            .eq('user_id', currentUser.userId)
+            .order('date', { ascending: false })
+
+        if (error) {
+            console.error(error)
+            return
+        }
+        allRecords = data || []
+        setupFilters()
+    }
+
+    // ===== フィルター設定 =====
+    function setupFilters() {
+        const months = [...new Set(allRecords.map(r => r.date?.substring(0, 7)).filter(Boolean))].sort().reverse()
+        const accounts = [...new Set(allRecords.map(r => r.account).filter(Boolean))]
+
+        const filterMonth = document.getElementById('filterMonth')
+        const exportMonth = document.getElementById('exportMonth')
+        filterMonth.innerHTML = '<option value="">すべての月</option>'
+        exportMonth.innerHTML = '<option value="">すべての月</option>'
+
+        months.forEach(m => {
+            const label = m.replace('-', '年') + '月'
+            filterMonth.innerHTML += `<option value="${m}">${label}</option>`
+            exportMonth.innerHTML += `<option value="${m}">${label}</option>`
+        })
+
+        const filterAccount = document.getElementById('filterAccount')
+        filterAccount.innerHTML = '<option value="">すべての科目</option>'
+        accounts.forEach(a => {
+            filterAccount.innerHTML += `<option value="${a}">${a}</option>`
+        })
+    }
+
+    // ===== ホームデータ読み込み =====
+    async function loadHomeData() {
+        const year = currentMonth.getFullYear()
+        const month = String(currentMonth.getMonth() + 1).padStart(2, '0')
+        const monthStr = `${year}-${month}`
+
+        const monthRecords = allRecords.filter(r => r.date?.startsWith(monthStr))
+        const total = monthRecords.reduce((sum, r) => sum + (r.amount || 0), 0)
+
+        document.getElementById('monthTotal').textContent = `${total.toLocaleString()}円`
+        document.getElementById('monthCount').textContent = `${monthRecords.length}件`
+
+        // 勘定科目別集計
+        const accountTotals = {}
+        monthRecords.forEach(r => {
+            if (r.account) {
+                accountTotals[r.account] = (accountTotals[r.account] || 0) + (r.amount || 0)
+            }
+        })
+
+        // ホームチャート
+        if (homeChartInstance) homeChartInstance.destroy()
+        const ctx = document.getElementById('homeChart').getContext('2d')
+        homeChartInstance = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(accountTotals),
+                datasets: [{
+                    data: Object.values(accountTotals),
+                    backgroundColor: [
+                        '#06C755', '#4CAF50', '#8BC34A', '#CDDC39',
+                        '#FFC107', '#FF9800', '#FF5722', '#F44336',
+                        '#E91E63', '#9C27B0', '#673AB7', '#3F51B5'
+                    ]
+                }]
+            },
+            options: {
+                plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } }
+            }
+        })
+
+        // 最近の登録
+        const recent = monthRecords.slice(0, 5)
+        const recentList = document.getElementById('recentList')
+        if (recent.length === 0) {
+            recentList.innerHTML = '<p style="color:#999; text-align:center; padding:20px;">データがありません</p>'
+            return
+        }
+        recentList.innerHTML = recent.map(r => `
+            <div class="record-item">
+                <div class="record-info">
+                    <div class="store">${r.store || '-'}</div>
+                    <div class="detail">${r.date || ''} | ${r.item || ''}</div>
+                    <span class="badge">${r.account || ''}</span>
+                </div>
+                <div class="record-amount">${(r.amount || 0).toLocaleString()}円</div>
+            </div>
+        `).join('')
+    }
+
+    // ===== 月変更 =====
+    function changeMonth(delta) {
+        currentMonth.setMonth(currentMonth.getMonth() + delta)
+        updateMonthLabel()
+        loadHomeData()
+    }
+
+    function updateMonthLabel() {
+        const year = currentMonth.getFullYear()
+        const month = currentMonth.getMonth() + 1
+        document.getElementById('currentMonthLabel').textContent = `${year}年${month}月`
+    }
+
+    // ===== 一覧読み込み =====
+    async function loadRecords() {
+        const monthFilter = document.getElementById('filterMonth').value
+        const accountFilter = document.getElementById('filterAccount').value
+
+        let filtered = allRecords
+        if (monthFilter) filtered = filtered.filter(r => r.date?.startsWith(monthFilter))
+        if (accountFilter) filtered = filtered.filter(r => r.account === accountFilter)
+
+        const list = document.getElementById('recordsList')
+        if (filtered.length === 0) {
+            list.innerHTML = '<p style="color:#999; text-align:center; padding:20px;">データがありません</p>'
+            return
+        }
+
+        list.innerHTML = filtered.map(r => `
+            <div class="record-item">
+                <div class="record-info">
+                    <div class="store">${r.store || '-'}</div>
+                    <div class="detail">${r.date || ''} | ${r.item || ''} | ${r.payment || ''}</div>
+                    <span class="badge">${r.account || ''}</span>
+                </div>
+                <div class="record-amount">${(r.amount || 0).toLocaleString()}円</div>
+            </div>
+        `).join('')
+    }
+
+    // ===== グラフ読み込み =====
+    async function loadCharts() {
+        // 月別推移
+        const monthlyData = {}
+        allRecords.forEach(r => {
+            const m = r.date?.substring(0, 7)
+            if (m) monthlyData[m] = (monthlyData[m] || 0) + (r.amount || 0)
+        })
+        const sortedMonths = Object.keys(monthlyData).sort()
+
+        if (monthlyChartInstance) monthlyChartInstance.destroy()
+        const ctx1 = document.getElementById('monthlyChart').getContext('2d')
+        monthlyChartInstance = new Chart(ctx1, {
+            type: 'bar',
+            data: {
+                labels: sortedMonths.map(m => m.replace('-', '年') + '月'),
+                datasets: [{
+                    label: '合計金額',
+                    data: sortedMonths.map(m => monthlyData[m]),
+                    backgroundColor: '#06C755'
+                }]
+            },
+            options: {
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true } }
+            }
+        })
+
+        // 勘定科目別
+        const accountData = {}
+        allRecords.forEach(r => {
+            if (r.account) accountData[r.account] = (accountData[r.account] || 0) + (r.amount || 0)
+        })
+
+        if (accountChartInstance) accountChartInstance.destroy()
+        const ctx2 = document.getElementById('accountChart').getContext('2d')
+        accountChartInstance = new Chart(ctx2, {
+            type: 'pie',
+            data: {
+                labels: Object.keys(accountData),
+                datasets: [{
+                    data: Object.values(accountData),
+                    backgroundColor: [
+                        '#06C755', '#4CAF50', '#8BC34A', '#CDDC39',
+                        '#FFC107', '#FF9800', '#FF5722', '#F44336',
+                        '#E91E63', '#9C27B0', '#673AB7', '#3F51B5'
+                    ]
+                }]
+            },
+            options: {
+                plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } }
+            }
+        })
+    }
+
+    // ===== CSV出力 =====
+    function exportCSV() {
+        const monthFilter = document.getElementById('exportMonth').value
+        let filtered = allRecords
+        if (monthFilter) filtered = filtered.filter(r => r.date?.startsWith(monthFilter))
+
+        const header = '日付,支払先,内容,金額,勘定科目,支払方法\n'
+        const rows = filtered.map(r =>
+            `${r.date || ''},${r.store || ''},${r.item || ''},${r.amount || 0},${r.account || ''},${r.payment || ''}`
+        ).join('\n')
+
+        const blob = new Blob(['\uFEFF' + header + rows], { type: 'text/csv;charset=utf-8;' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `経費_${monthFilter || '全期間'}.csv`
+        a.click()
+    }
+
+    // ===== Excel出力 =====
+    function exportExcel() {
+        const monthFilter = document.getElementById('exportMonth').value
+        let filtered = allRecords
+        if (monthFilter) filtered = filtered.filter(r => r.date?.startsWith(monthFilter))
+
+        let html = '<table><tr><th>日付</th><th>支払先</th><th>内容</th><th>金額</th><th>勘定科目</th><th>支払方法</th></tr>'
+        filtered.forEach(r => {
+            html += `<tr><td>${r.date || ''}</td><td>${r.store || ''}</td><td>${r.item || ''}</td><td>${r.amount || 0}</td><td>${r.account || ''}</td><td>${r.payment || ''}</td></tr>`
+        })
+        html += '</table>'
+
+        const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8;' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `経費_${monthFilter || '全期間'}.xls`
+        a.click()
+    }
+
+    // ===== 設定読み込み =====
+    async function loadSettings() {
+        const { data } = await db
+            .from('users')
+            .select('*')
+            .eq('user_id', currentUser.userId)
+            .single()
+
+        if (data) {
+            document.getElementById('usageSetting').value = data.usage || 'business'
+            document.getElementById('displaySetting').value = data.display || 'account'
+
+            const planInfo = document.getElementById('planInfo')
+            const upgradeBtn = document.getElementById('upgradeBtn')
+            if (data.plan === 'free') {
+                planInfo.textContent = `無料プラン（今月${data.monthly_count || 0}/30件使用）`
+                upgradeBtn.style.display = 'block'
+            } else {
+                planInfo.textContent = '有料プラン（無制限）'
+                upgradeBtn.style.display = 'none'
+            }
+        }
+    }
+
+    // ===== 設定保存 =====
+    async function saveSettings() {
+        const usage = document.getElementById('usageSetting').value
+        const display = document.getElementById('displaySetting').value
+
+        const { error } = await db
+            .from('users')
+            .update({ usage, display })
+            .eq('user_id', currentUser.userId)
+
+        if (error) {
+            alert('保存に失敗しました')
+        } else {
+            alert('設定を保存しました！')
+        }
+    }
+
+    // ===== プランアップグレード =====
+    function upgradePlan() {
+        alert('Stripe決済は準備中です')
+    }
+
+    // ===== ログアウト =====
+    function logout() {
+        localStorage.removeItem('line_user')
+        localStorage.removeItem('line_state')
+        currentUser = null
+        document.getElementById('mainPage').style.display = 'none'
+        document.getElementById('loginPage').style.display = 'flex'
+    }
+
+    // ===== ページ切り替え =====
+    function showPage(page, btn) {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'))
+        document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'))
+        document.getElementById(page + 'Page').classList.add('active')
+        btn.classList.add('active')
+
+        if (page === 'records') loadRecords()
+        if (page === 'chart') loadCharts()
+    }
+
+    // ===== 初期化 =====
+    checkAuth()
+</script>
+</body>
+</html>
