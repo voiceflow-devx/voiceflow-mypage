@@ -196,7 +196,7 @@
     <div class="login-card">
         <h1>📊 経費マイページ</h1>
         <p>LINEアカウントでログインして<br>経費データを確認できます</p>
-        <button class="login-btn" onclick="loginWithLine()">
+        <button class="login-btn" onclick="initLiff()">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
             </svg>
@@ -340,7 +340,6 @@
     // ===== Supabase設定 =====
     const SUPABASE_URL = 'https://ewmxcvyrfqdhujcldrca.supabase.co'
     const SUPABASE_KEY = 'sb_publishable_p4BmWWdsN6bQ-0zjozrnNQ_IjUBJSeo'
-    const LINE_CHANNEL_ID = '2010043850'
 
     const { createClient } = supabase
     const db = createClient(SUPABASE_URL, SUPABASE_KEY)
@@ -354,7 +353,7 @@
 
 
     // ===== LIFF 初期化 =====
-    const LIFF_ID = 'https://liff.line.me/2010043850-PaxG9LLM'
+    const LIFF_ID = '2010043850-PaxG9LLM'
     
     async function initLiff() {
         try {
@@ -379,49 +378,6 @@
         } catch (err) {
             console.error(err)
             alert('LIFF初期化失敗')
-        }
-    }
-
-    // ===== 認証チェック =====
-    async function checkAuth() {
-        const params = new URLSearchParams(window.location.search)
-        const code = params.get('code')
-        const state = params.get('state')
-
-        if (code) {
-            const savedState = localStorage.getItem('line_state')
-            if (state !== savedState) {
-                alert('認証エラーが発生しました')
-                return
-            }
-            await handleLineCallback(code)
-            window.history.replaceState({}, '', window.location.pathname)
-            return
-        }
-
-        const savedUser = localStorage.getItem('line_user')
-        if (savedUser) {
-            currentUser = JSON.parse(savedUser)
-            showMain()
-        } else {
-            document.getElementById('loginPage').style.display = 'flex'
-        }
-    }
-
-    // ===== LINEコールバック処理 =====
-   {
-        try {
-            // ※本来はサーバーサイドでトークン取得が必要
-            // ここでは簡易的にuser_idを手動入力で代替
-            const userId = prompt('LINE User IDを入力してください（開発用）:')
-            if (!userId) return
-
-            currentUser = { userId }
-            localStorage.setItem('line_user', JSON.stringify(currentUser))
-            showMain()
-        } catch (e) {
-            console.error(e)
-            alert('ログインに失敗しました')
         }
     }
 
