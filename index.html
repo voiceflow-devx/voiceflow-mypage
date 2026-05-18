@@ -6,6 +6,7 @@
     <title>マイページ - 経費記録</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -351,13 +352,34 @@
     let monthlyChartInstance = null
     let accountChartInstance = null
 
-    // ===== LINE Login =====
-    function loginWithLine() {
-        const redirectUri = encodeURIComponent(window.location.origin + window.location.pathname)
-        const state = Math.random().toString(36).substring(2)
-        localStorage.setItem('line_state', state)
-        const url = `https://access.line.me/oauth2/v2.1/authorize?response_type=code&client_id=${LINE_CHANNEL_ID}&redirect_uri=${redirectUri}&state=${state}&scope=profile%20openid`
-        window.location.href = url
+
+    // ===== LIFF 初期化 =====
+    const LIFF_ID = 'https://liff.line.me/2010043850-PaxG9LLM'
+    
+    async function initLiff() {
+        try {
+            await liff.init({ liffId: LIFF_ID })
+    
+            if (!liff.isLoggedIn()) {
+                liff.login()
+                return
+            }
+    
+            const profile = await liff.getProfile()
+    
+            currentUser = {
+                userId: profile.userId,
+                name: profile.displayName
+            }
+    
+            localStorage.setItem('line_user', JSON.stringify(currentUser))
+    
+            showMain()
+    
+        } catch (err) {
+            console.error(err)
+            alert('LIFF初期化失敗')
+        }
     }
 
     // ===== 認証チェック =====
@@ -387,7 +409,7 @@
     }
 
     // ===== LINEコールバック処理 =====
-    async function handleLineCallback(code) {
+   {
         try {
             // ※本来はサーバーサイドでトークン取得が必要
             // ここでは簡易的にuser_idを手動入力で代替
@@ -714,7 +736,7 @@
     }
 
     // ===== 初期化 =====
-    checkAuth()
+    initLiff()
 </script>
 </body>
 </html>
