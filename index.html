@@ -458,13 +458,13 @@
         const year = currentMonth.getFullYear()
         const month = String(currentMonth.getMonth() + 1).padStart(2, '0')
         const monthStr = `${year}-${month}`
-        // const monthRecords = allRecords.filter(r => r.date?.startsWith(monthStr))
-        const monthRecords = allRecords.filter(r => {
-            if (!r.date) return false
+        const monthRecords = allRecords.filter(r => r.date?.startsWith(monthStr))
+        // const monthRecords = allRecords.filter(r => {
+        //     if (!r.date) return false
         
-            const normalized = r.date.replace(/\//g, '-')
-            return normalized.startsWith(monthStr)
-        })
+        //     const normalized = r.date.replace(/\//g, '-')
+        //     return normalized.startsWith(monthStr)
+        // })
         const total = monthRecords.reduce((sum, r) => sum + (r.amount || 0), 0)
 
         document.getElementById('monthTotal').textContent = `${total.toLocaleString()}円`
