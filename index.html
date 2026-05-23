@@ -420,6 +420,11 @@
         }
         allRecords = data || []
         console.log(allRecords)
+        
+        if (allRecords.length > 0) {
+            currentMonth = new Date(allRecords[0].date)
+        }
+        
         setupFilters()
     }
 
