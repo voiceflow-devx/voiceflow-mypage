@@ -366,6 +366,9 @@
     
             const profile = await liff.getProfile()
 
+            console.log(profile.userId)
+            alert(profile.userId)
+            
             currentUser = {
                 userId: profile.userId,
                 name: profile.displayName,
