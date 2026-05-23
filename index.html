@@ -366,9 +366,6 @@
     
             const profile = await liff.getProfile()
 
-            console.log(profile.userId)
-            alert(profile.userId)
-            
             currentUser = {
                 userId: profile.userId,
                 name: profile.displayName,
@@ -650,19 +647,11 @@
 
     // ===== 設定読み込み =====
     async function loadSettings() {
-        const { data, error } = await db
+        const { data } = await db
             .from('users')
             .select('*')
             .eq('user_id', currentUser.userId)
-            .maybeSingle()
-        
-        console.log(data)
-        console.log(error)
-
-        if (error) {
-            console.error(error)
-            return
-        }
+            .single()
 
         if (data) {
             document.getElementById('usageSetting').value = data.usage || 'business'
