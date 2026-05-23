@@ -350,7 +350,12 @@
     let homeChartInstance = null
     let monthlyChartInstance = null
     let accountChartInstance = null
-
+    
+    // 日付を YYYY-MM に統一
+    function normalizeMonth(dateStr) {
+        if (!dateStr) return ''
+        return dateStr.replace(/\//g, '-').substring(0, 7)
+    }
 
     // ===== LIFF 初期化 =====
     const LIFF_ID = '2010043850-PaxG9LLM'
@@ -419,7 +424,9 @@
 
     // ===== フィルター設定 =====
     function setupFilters() {
-        const months = [...new Set(allRecords.map(r => r.date?.substring(0, 7)).filter(Boolean))].sort().reverse()
+        const months = [...new Set(
+            allRecords.map(r => normalizeMonth(r.date)).filter(Boolean)
+        )].sort().reverse()
         const accounts = [...new Set(allRecords.map(r => r.account).filter(Boolean))]
 
         const filterMonth = document.getElementById('filterMonth')
@@ -512,20 +519,12 @@
         loadHomeData()
     }
 
-    // function updateMonthLabel() {
-    //     const year = currentMonth.getFullYear()
-    //     const month = currentMonth.getMonth() + 1
-    //     document.getElementById('currentMonthLabel').textContent = `${year}年${month}月`
-    // }
     function updateMonthLabel() {
         const year = currentMonth.getFullYear()
         const month = currentMonth.getMonth() + 1
-    
-        console.log('NOW:', currentMonth)
-    
-        document.getElementById('currentMonthLabel').textContent =
-            `${year}年${month}月 TEST`
+        document.getElementById('currentMonthLabel').textContent = `${year}年${month}月`
     }
+
 
     // ===== 一覧読み込み =====
     async function loadRecords() {
@@ -565,7 +564,7 @@
         // 月別推移
         const monthlyData = {}
         allRecords.forEach(r => {
-            const m = r.date?.substring(0, 7)
+            const m = normalizeMonth(r.date)
             if (m) monthlyData[m] = (monthlyData[m] || 0) + (r.amount || 0)
         })
         const sortedMonths = Object.keys(monthlyData).sort()
@@ -619,7 +618,11 @@
     function exportCSV() {
         const monthFilter = document.getElementById('exportMonth').value
         let filtered = allRecords
-        if (monthFilter) filtered = filtered.filter(r => r.date?.startsWith(monthFilter))
+        if (monthFilter) {
+            filtered = filtered.filter(r =>
+                normalizeMonth(r.date) === monthFilter
+            )
+        }
 
         const header = '日付,支払先,内容,金額,勘定科目,支払方法\n'
         const rows = filtered.map(r =>
@@ -638,7 +641,11 @@
     function exportExcel() {
         const monthFilter = document.getElementById('exportMonth').value
         let filtered = allRecords
-        if (monthFilter) filtered = filtered.filter(r => r.date?.startsWith(monthFilter))
+        if (monthFilter) {
+            filtered = filtered.filter(r =>
+                normalizeMonth(r.date) === monthFilter
+            )
+        }
 
         let html = '<table><tr><th>日付</th><th>支払先</th><th>内容</th><th>金額</th><th>勘定科目</th><th>支払方法</th></tr>'
         filtered.forEach(r => {
