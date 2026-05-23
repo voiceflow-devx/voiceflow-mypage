@@ -636,11 +636,19 @@
 
     // ===== 設定読み込み =====
     async function loadSettings() {
-        const { data } = await db
+        const { data, error } = await db
             .from('users')
             .select('*')
             .eq('user_id', currentUser.userId)
-            .single()
+            .maybeSingle()
+        
+        console.log(data)
+        console.log(error)
+
+        if (error) {
+            console.error(error)
+            return
+        }
 
         if (data) {
             document.getElementById('usageSetting').value = data.usage || 'business'
