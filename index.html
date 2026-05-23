@@ -512,10 +512,19 @@
         loadHomeData()
     }
 
+    // function updateMonthLabel() {
+    //     const year = currentMonth.getFullYear()
+    //     const month = currentMonth.getMonth() + 1
+    //     document.getElementById('currentMonthLabel').textContent = `${year}年${month}月`
+    // }
     function updateMonthLabel() {
         const year = currentMonth.getFullYear()
         const month = currentMonth.getMonth() + 1
-        document.getElementById('currentMonthLabel').textContent = `${year}年${month}月`
+    
+        console.log('NOW:', currentMonth)
+    
+        document.getElementById('currentMonthLabel').textContent =
+            `${year}年${month}月 TEST`
     }
 
     // ===== 一覧読み込み =====
