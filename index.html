@@ -365,10 +365,11 @@
             }
     
             const profile = await liff.getProfile()
-    
+
             currentUser = {
                 userId: profile.userId,
-                name: profile.displayName
+                name: profile.displayName,
+                pictureUrl: profile.pictureUrl
             }
     
             localStorage.setItem('line_user', JSON.stringify(currentUser))
@@ -385,7 +386,15 @@
     async function showMain() {
         document.getElementById('loginPage').style.display = 'none'
         document.getElementById('mainPage').style.display = 'block'
-        document.getElementById('userInfo').textContent = `ID: ${currentUser.userId.substring(0, 8)}...`
+        document.getElementById('userInfo').innerHTML = `
+            <div style="display:flex; align-items:center; gap:8px;">
+                <img
+                    src="${currentUser.pictureUrl || ''}"
+                    style="width:32px; height:32px; border-radius:50%;"
+                >
+                <span>${currentUser.name}</span>
+            </div>
+        `
         await loadAllData()
         updateMonthLabel()
         await loadHomeData()
