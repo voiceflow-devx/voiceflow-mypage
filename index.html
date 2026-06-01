@@ -251,18 +251,64 @@
 
         <!-- 一覧 -->
         <div id="recordsPage" class="page">
-            <div class="filter-row">
-                <select id="filterMonth" onchange="loadRecords()">
-                    <option value="">すべての月</option>
+            <div class="filters">
+                <!-- フリーワード -->
+                <input
+                    type="text"
+                    id="filterKeyword"
+                    placeholder="フリーワード"
+                    oninput="loadRecords()">
+            
+                <!-- 年 -->
+                <select id="filterYear"onchange="loadRecords()">
+                    <option value="">年</option>
                 </select>
-                <select id="filterAccount" onchange="loadRecords()">
+            
+                <!-- 月 -->
+                <select id="filterMonth2"onchange="loadRecords()">
+                    <option value="">月</option>
+                </select>
+            
+                <!-- 日 -->
+                <select id="filterDay"onchange="loadRecords()">
+                    <option value="">日</option>
+                </select>
+            
+                <!-- 支払先 -->
+                <input
+                    type="text"
+                    id="filterStore"
+                    placeholder="支払先"
+                    oninput="loadRecords()">
+            
+                <!-- 内容 -->
+                <input
+                    type="text"
+                    id="filterItem"
+                    placeholder="内容"
+                    oninput="loadRecords()">
+            
+                <!-- 金額 -->
+                <input
+                    type="number"
+                    id="filterAmount"
+                    placeholder="金額"
+                    oninput="loadRecords()">
+            
+                <!-- 既存 -->
+                 <select id="filterAccount" onchange="loadRecords()">
                     <option value="">すべての科目</option>
                 </select>
-            </div>
-            <div class="card">
-                <div id="recordsList"><div class="loading">読み込み中...</div></div>
-            </div>
-        </div>
+                </div>
+                <div class="card">
+                    <div id="recordsList">
+                        <div class="loading">
+                            読み込み中...
+                        </div>
+                    </div>
+                </div>
+                
+                </div>
 
         <!-- グラフ -->
         <div id="chartPage" class="page">
@@ -435,14 +481,14 @@
         )].sort().reverse()
         const accounts = [...new Set(allRecords.map(r => r.account).filter(Boolean))]
 
-        const filterMonth = document.getElementById('filterMonth')
+        // const filterMonth = document.getElementById('filterMonth')
         const exportMonth = document.getElementById('exportMonth')
-        filterMonth.innerHTML = '<option value="">すべての月</option>'
+        // filterMonth.innerHTML = '<option value="">すべての月</option>'
         exportMonth.innerHTML = '<option value="">すべての月</option>'
 
         months.forEach(m => {
             const label = m.replace('-', '年') + '月'
-            filterMonth.innerHTML += `<option value="${m}">${label}</option>`
+            // filterMonth.innerHTML += `<option value="${m}">${label}</option>`
             exportMonth.innerHTML += `<option value="${m}">${label}</option>`
         })
 
@@ -451,6 +497,43 @@
         accounts.forEach(a => {
             filterAccount.innerHTML += `<option value="${a}">${a}</option>`
         })
+        const filterYear =
+        document.getElementById('filterYear')
+        
+        filterYear.innerHTML =
+        '<option value="">年</option>'
+        
+        for(let y = 2023; y <= 2030; y++){
+        
+            filterYear.innerHTML +=
+            `<option value="${y}">${y}年</option>`
+        }
+        const filterMonth2 =
+        document.getElementById('filterMonth2')
+        
+        filterMonth2.innerHTML =
+        '<option value="">月</option>'
+        
+        for(let m=1; m<=12; m++){
+        
+            filterMonth2.innerHTML +=
+            `<option value="${m}">
+                ${m}月
+             </option>`
+        }
+        const filterDay =
+        document.getElementById('filterDay')
+        
+        filterDay.innerHTML =
+        '<option value="">日</option>'
+        
+        for(let d=1; d<=31; d++){
+        
+            filterDay.innerHTML +=
+            `<option value="${d}">
+                ${d}日
+             </option>`
+        }
     }
 
     // ===== ホームデータ読み込み =====
@@ -534,25 +617,155 @@
 
     // ===== 一覧読み込み =====
     async function loadRecords() {
-        const monthFilter = document.getElementById('filterMonth').value
+        // const monthFilter = document.getElementById('filterMonth').value
         const accountFilter = document.getElementById('filterAccount').value
+        const keyword =
+        (
+            document.getElementById(
+                'filterKeyword'
+            )?.value || ''
+        ).toLowerCase()
+        
+        const year =
+        document.getElementById(
+            'filterYear'
+        )?.value || ''
+        
+        const month2 =
+        document.getElementById(
+            'filterMonth2'
+        )?.value || ''
+        
+        const day =
+        document.getElementById(
+            'filterDay'
+        )?.value || ''
+        
+        const store =
+        (
+            document.getElementById(
+                'filterStore'
+            )?.value || ''
+        ).toLowerCase()
+        
+        const item =
+        (
+            document.getElementById(
+                'filterItem'
+            )?.value || ''
+        ).toLowerCase()
+        
+        const amount =
+        document.getElementById(
+            'filterAmount'
+        )?.value || ''
 
         let filtered = allRecords
         // if (monthFilter) filtered = filtered.filter(r => r.date?.startsWith(monthFilter))
-        if (monthFilter) {
+        if (accountFilter) filtered = filtered.filter(r => r.account === accountFilter)
+        // フリーワード
+        if (keyword) {
+        
+            filtered = filtered.filter(r =>
+        
+                (r.store || '')
+                    .toLowerCase()
+                    .includes(keyword)
+        
+                ||
+        
+                (r.item || '')
+                    .toLowerCase()
+                    .includes(keyword)
+        
+                ||
+        
+                (r.account || '')
+                    .toLowerCase()
+                    .includes(keyword)
+        
+                ||
+        
+                String(r.amount || '')
+                    .includes(keyword)
+            )
+        }
+        
+        // 年
+        if (year) {
+        
+            filtered = filtered.filter(r =>
+        
+                (r.date || '')
+                    .startsWith(year)
+            )
+        }
+        
+        // 月
+        if (month2) {
+        
             filtered = filtered.filter(r => {
-                if (!r.date) return false
-                return r.date.replace(/\//g, '-').startsWith(monthFilter)
+        
+                const d =
+                    (r.date || '')
+                    .replace(/\//g, '-')
+        
+                return d.split('-')[1]
+                    === month2.padStart(2, '0')
             })
         }
-        if (accountFilter) filtered = filtered.filter(r => r.account === accountFilter)
-
+        
+        // 日
+        if (day) {
+        
+            filtered = filtered.filter(r => {
+        
+                const d =
+                    (r.date || '')
+                    .replace(/\//g, '-')
+        
+                return d.split('-')[2]
+                    === day.padStart(2, '0')
+            })
+        }
+        
+        // 支払先
+        if (store) {
+        
+            filtered = filtered.filter(r =>
+        
+                (r.store || '')
+                    .toLowerCase()
+                    .includes(store)
+            )
+        }
+        
+        // 内容
+        if (item) {
+        
+            filtered = filtered.filter(r =>
+        
+                (r.item || '')
+                    .toLowerCase()
+                    .includes(item)
+            )
+        }
+        
+        // 金額
+        if (amount) {
+        
+            filtered = filtered.filter(r =>
+        
+                String(r.amount || '')
+                    === amount
+            )
+        }
         const list = document.getElementById('recordsList')
         if (filtered.length === 0) {
             list.innerHTML = '<p style="color:#999; text-align:center; padding:20px;">データがありません</p>'
             return
         }
-
+        
         list.innerHTML = filtered.map(r => `
             <div class="record-item">
                 <div class="record-info">
