@@ -430,15 +430,20 @@
             }
     
             const profile = await liff.getProfile()
-
             currentUser = {
                 userId: profile.userId,
                 name: profile.displayName,
                 pictureUrl: profile.pictureUrl
             }
-    
-            localStorage.setItem('line_user', JSON.stringify(currentUser))
-    
+            
+            localStorage.setItem(
+                'line_user',
+                JSON.stringify(currentUser)
+            )
+            
+            // ===== login_logs 保存 =====
+            await saveLoginLog()
+            
             showMain()
     
         } catch (err) {
@@ -446,7 +451,44 @@
             alert('LIFF初期化失敗')
         }
     }
+    
+    // ===== login_logs 保存 =====
+    async function saveLoginLog() {
+    
+        try {
+    
+            const deviceType =
+                liff.isInClient()
+                ? "LINE"
+                : "WEB"
+            await db
 
+                .from("login_logs")
+                .insert([{    
+                    user_id:
+                        currentUser.userId,      
+                    login_type:
+                        "LIFF",     
+                    device_type:
+                        deviceType,           
+                    ip_address:
+                        null,      
+                    user_agent:
+                        navigator.userAgent
+            
+                }])
+    
+        } catch (e) {
+    
+            console.log(
+                "login_logs保存失敗",
+                e
+            )
+    
+        }
+    
+    }
+    
     // ===== メインページ表示 =====
     async function showMain() {
         document.getElementById('loginPage').style.display = 'none'
