@@ -299,6 +299,20 @@
                  <select id="filterAccount" onchange="loadRecords()">
                     <option value="">すべての科目</option>
                 </select>
+                
+                <!-- ボタン -->
+                <button
+                    onclick="resetFilters()"
+                    style="
+                        background:#f44336;
+                        color:white;
+                        border:none;
+                        border-radius:8px;
+                        padding:8px 16px;
+                        cursor:pointer;
+                    ">
+                    検索条件をクリア
+                </button>
                 </div>
                 <div class="card">
                     <div id="recordsList">
@@ -778,6 +792,43 @@
         `).join('')
     }
 
+    function resetFilters() {
+
+        document.getElementById(
+            "filterKeyword"
+        ).value = ""
+    
+        document.getElementById(
+            "filterYear"
+        ).value = ""
+    
+        document.getElementById(
+            "filterMonth2"
+        ).value = ""
+    
+        document.getElementById(
+            "filterDay"
+        ).value = ""
+    
+        document.getElementById(
+            "filterStore"
+        ).value = ""
+    
+        document.getElementById(
+            "filterItem"
+        ).value = ""
+    
+        document.getElementById(
+            "filterAmount"
+        ).value = ""
+    
+        document.getElementById(
+            "filterAccount"
+        ).value = ""
+    
+        loadRecords()
+    
+    }
     // ===== グラフ読み込み =====
     async function loadCharts() {
         // 月別推移
