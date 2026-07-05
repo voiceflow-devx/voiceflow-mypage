@@ -570,14 +570,16 @@
     
             console.log('LIFF初期化完了')
             console.log('isLoggedIn:', liff.isLoggedIn())
-            console.log('isInClient:', liff.isInClient())
     
             if (!liff.isLoggedIn()) {
     
                 console.log('未ログインのためLINEログインへ移動')
     
+                const redirectUrl =
+                    window.location.origin + window.location.pathname
+    
                 liff.login({
-                    redirectUri: window.location.href
+                    redirectUri: redirectUrl
                 })
     
                 return
@@ -598,21 +600,27 @@
                 JSON.stringify(currentUser)
             )
     
-            await saveLoginLog()
-    
             await showMain()
     
         } catch (err) {
     
             console.error('LIFF初期化エラー', err)
     
-            showMessageModal(
-                'ログインに失敗しました',
-                'ページを閉じて、もう一度マイページを開いてください。'
-            )
+            document.getElementById('loginPage').innerHTML = `
+                <div class="login-card">
+                    <h1>ログインに失敗しました</h1>
+                    <p style="color:#666; font-size:13px; line-height:1.7;">
+                        ページを閉じて、もう一度マイページを開いてください。<br><br>
+                        エラー内容：${err.message || err}
+                    </p>
+                    <button class="login-btn" onclick="initLiff()">
+                        もう一度ログインする
+                    </button>
+                </div>
+            `
         }
     }
-    
+
     // ===== メインページ表示 =====
     async function showMain() {
         document.getElementById('loginPage').style.display = 'none'
