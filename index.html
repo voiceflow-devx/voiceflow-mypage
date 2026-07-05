@@ -1266,8 +1266,8 @@
             )
             return
         }
-    
-        await db
+
+        const { error: logError } = await db
             .from('record_logs')
             .insert([{
                 user_id: currentUser.userId,
@@ -1278,6 +1278,35 @@
                 source: 'LIFF',
                 memo: 'マイページから修正'
             }])
+        
+        if (logError) {
+            console.error(logError)
+            showMessageModal(
+                'ログ保存に失敗しました',
+                logError.message
+            )
+            return
+        }
+        const { error: logError } = await db
+            .from('record_logs')
+            .insert([{
+                user_id: currentUser.userId,
+                record_id: editingRecordId,
+                action: 'mypage_update',
+                before_data: beforeData,
+                after_data: updated,
+                source: 'LIFF',
+                memo: 'マイページから修正'
+            }])
+        
+        if (logError) {
+            console.error(logError)
+            showMessageModal(
+                'ログ保存に失敗しました',
+                logError.message
+            )
+            return
+        }
     
         closeEditModal()
     
