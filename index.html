@@ -517,6 +517,20 @@
     </div>
 </div>
 
+<!-- 完了メッセージモーダル -->
+<div id="messageModal" class="modal-bg">
+    <div class="modal-box">
+        <div id="messageModalTitle" class="modal-title">完了しました</div>
+        <div id="messageModalText" class="modal-note">
+            処理が完了しました。
+        </div>
+
+        <div class="modal-buttons">
+            <button class="btn-save" onclick="closeMessageModal()">OK</button>
+        </div>
+    </div>
+</div>
+
 <script>
     
     // ===== Supabase設定 =====
@@ -1169,6 +1183,21 @@
         if (page === 'chart') loadCharts()
     }
 
+    // ===== メッセージモーダル表示 =====
+    function showMessageModal(title, message) {
+    
+        document.getElementById('messageModalTitle').textContent = title
+        document.getElementById('messageModalText').innerHTML = message
+        document.getElementById('messageModal').style.display = 'block'
+    }
+    
+    
+    // ===== メッセージモーダルを閉じる =====
+    function closeMessageModal() {
+    
+        document.getElementById('messageModal').style.display = 'none'
+    }
+
     // ===== マイページ：修正モーダルを開く =====
     async function openEditRecord(recordId) {
     
@@ -1205,7 +1234,10 @@
         const record = allRecords.find(r => String(r.id) === String(editingRecordId))
     
         if (!record) {
-            alert('対象データが見つかりません')
+            showMessageModal(
+                '対象データが見つかりません',
+                'ページを再読み込みしてからもう一度お試しください。'
+            )
             return
         }
     
@@ -1228,7 +1260,10 @@
     
         if (error) {
             console.error(error)
-            alert('修正に失敗しました')
+            showMessageModal(
+                '修正に失敗しました',
+                '時間をおいてもう一度お試しください。'
+            )
             return
         }
     
@@ -1246,7 +1281,10 @@
     
         closeEditModal()
     
-        alert('修正しました')
+        showMessageModal(
+            '修正しました',
+            'マイページのデータを更新しました。<br>操作履歴もDBに保存されています。'
+        )
     
         await loadAllData()
         loadRecords()
@@ -1329,13 +1367,19 @@
     
         if (error) {
             console.error(error)
-            alert('削除に失敗しました')
+            showMessageModal(
+                '削除に失敗しました',
+                '時間をおいてもう一度お試しください。'
+            )
             return
         }
     
         closeDeleteModal()
     
-        alert('削除しました')
+        showMessageModal(
+            '削除しました',
+            '一覧から削除しました。<br>削除前のデータはバックアップとしてDBに保存されています。'
+        )
     
         await loadAllData()
         loadRecords()
