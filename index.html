@@ -606,18 +606,10 @@
     
             console.error('LIFF初期化エラー', err)
     
-            document.getElementById('loginPage').innerHTML = `
-                <div class="login-card">
-                    <h1>ログインに失敗しました</h1>
-                    <p style="color:#666; font-size:13px; line-height:1.7;">
-                        ページを閉じて、もう一度マイページを開いてください。<br><br>
-                        エラー内容：${err.message || err}
-                    </p>
-                    <button class="login-btn" onclick="initLiff()">
-                        もう一度ログインする
-                    </button>
-                </div>
-            `
+            showMessageModal(
+                'ログインに失敗しました',
+                `ページを閉じて、もう一度マイページを開いてください。<br><br>${err.message || err}`
+            )
         }
     }
 
@@ -1256,26 +1248,6 @@
             return
         }
 
-        const { error: logError } = await db
-            .from('record_logs')
-            .insert([{
-                user_id: currentUser.userId,
-                record_id: editingRecordId,
-                action: 'mypage_update',
-                before_data: beforeData,
-                after_data: updated,
-                source: 'LIFF',
-                memo: 'マイページから修正'
-            }])
-        
-        if (logError) {
-            console.error(logError)
-            showMessageModal(
-                'ログ保存に失敗しました',
-                logError.message
-            )
-            return
-        }
         const { error: logError } = await db
             .from('record_logs')
             .insert([{
