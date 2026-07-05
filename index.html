@@ -280,6 +280,11 @@
                 font-size: 16px;
             }
         }
+        
+        .modal-input:focus {
+            outline: 2px solid #06C755;
+            border-color: #06C755;
+        }
     </style>
        
 </head>
@@ -1193,6 +1198,28 @@
         document.getElementById('messageModal').style.display = 'block'
     }
     
+    // ===== 入力欄タップ時に自動で見える位置へ移動 =====
+    function setupModalInputAutoScroll() {
+    
+        const inputs = document.querySelectorAll('.modal-input')
+    
+        inputs.forEach(input => {
+    
+            input.addEventListener('focus', () => {
+    
+                setTimeout(() => {
+    
+                    input.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'center'
+                    })
+    
+                }, 300)
+    
+            })
+    
+        })
+    }
     
     // ===== メッセージモーダルを閉じる =====
     function closeMessageModal() {
@@ -1398,6 +1425,7 @@
     }
 
     // ===== 初期化 =====
+    setupModalInputAutoScroll()
     initLiff()
 </script>
 </body>
