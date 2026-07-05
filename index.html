@@ -356,45 +356,49 @@
 
         <!-- 設定 -->
         <div id="settingsPage" class="page">
-            <div class="card">
-                <h2>アカウント設定</h2>
-                <p style="font-size:13px; color:#666; margin-bottom:16px;">
-                    設定変更はLINEのボットからも行えます
-                </p>
-                <div style="margin-bottom:16px;">
-                    <label style="font-size:13px; color:#666;">用途</label>
-                    <select id="usageSetting" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; margin-top:4px; font-size:14px;">
-                        <option value="business">仕事・事業</option>
-                        <option value="household">家計簿</option>
-                    </select>
-                </div>
-                <div style="margin-bottom:16px;">
-                    <label style="font-size:13px; color:#666;">表示方法</label>
-                    <select id="displaySetting" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; margin-top:4px; font-size:14px;">
-                        <option value="account">勘定科目（確定申告向け）</option>
-                        <option value="category">カテゴリ（かんたん表示）</option>
-                    </select>
-                </div>
-                <button onclick="saveSettings()" style="width:100%; padding:12px; background:#06C755; color:white; border:none; border-radius:10px; font-size:15px; font-weight:bold; cursor:pointer;">
-                    保存する
-                </button>
-            </div>
+        
             <div class="card">
                 <h2>プラン</h2>
                 <p id="planInfo" style="font-size:14px; margin-bottom:12px;"></p>
-                <button id="upgradeBtn" onclick="upgradePlan()" style="width:100%; padding:12px; background:#FF6B35; color:white; border:none; border-radius:10px; font-size:15px; font-weight:bold; cursor:pointer; display:none;">
+        
+                <button
+                    id="upgradeBtn"
+                    onclick="upgradePlan()"
+                    style="
+                        width:100%;
+                        padding:12px;
+                        background:#FF6B35;
+                        color:white;
+                        border:none;
+                        border-radius:10px;
+                        font-size:15px;
+                        font-weight:bold;
+                        cursor:pointer;
+                        display:none;
+                    ">
                     有料プランにアップグレード（月額980円）
                 </button>
             </div>
+        
             <div class="card">
-                <button onclick="logout()" style="width:100%; padding:12px; background:#f5f5f5; color:#666; border:none; border-radius:10px; font-size:15px; cursor:pointer;">
+                <h2>ログアウト</h2>
+                <button
+                    onclick="logout()"
+                    style="
+                        width:100%;
+                        padding:12px;
+                        background:#f5f5f5;
+                        color:#666;
+                        border:none;
+                        border-radius:10px;
+                        font-size:15px;
+                        cursor:pointer;
+                    ">
                     ログアウト
                 </button>
             </div>
+        
         </div>
-
-    </div>
-</div>
 
 <script>
     // ===== Supabase設定 =====
@@ -821,14 +825,27 @@
             list.innerHTML = '<p style="color:#999; text-align:center; padding:20px;">データがありません</p>'
             return
         }
-        
+
         list.innerHTML = filtered.map(r => `
             <div class="record-item">
                 <div class="record-info">
                     <div class="store">${r.store || '-'}</div>
                     <div class="detail">${r.date || ''} | ${r.item || ''} | ${r.payment || ''}</div>
                     <span class="badge">${r.account || ''}</span>
+        
+                    <div style="display:flex; gap:8px; margin-top:10px;">
+                        <button onclick="openEditRecord('${r.id}')"
+                            style="flex:1; padding:8px; border:none; border-radius:8px; background:#06C755; color:white; font-weight:bold;">
+                            修正
+                        </button>
+        
+                        <button onclick="deleteRecordFromPage('${r.id}')"
+                            style="flex:1; padding:8px; border:none; border-radius:8px; background:#f44336; color:white; font-weight:bold;">
+                            削除
+                        </button>
+                    </div>
                 </div>
+        
                 <div class="record-amount">${(r.amount || 0).toLocaleString()}円</div>
             </div>
         `).join('')
@@ -975,42 +992,35 @@
 
     // ===== 設定読み込み =====
     async function loadSettings() {
-        const { data } = await db
+    
+        const { data, error } = await db
             .from('users')
             .select('*')
             .eq('user_id', currentUser.userId)
             .single()
-
-        if (data) {
-            document.getElementById('usageSetting').value = data.usage || 'business'
-            document.getElementById('displaySetting').value = data.display || 'account'
-
-            const planInfo = document.getElementById('planInfo')
-            const upgradeBtn = document.getElementById('upgradeBtn')
-            if (data.plan === 'free') {
-                planInfo.textContent = `無料プラン（今月${data.monthly_count || 0}/30件使用）`
-                upgradeBtn.style.display = 'block'
-            } else {
-                planInfo.textContent = '有料プラン（無制限）'
-                upgradeBtn.style.display = 'none'
-            }
-        }
-    }
-
-    // ===== 設定保存 =====
-    async function saveSettings() {
-        const usage = document.getElementById('usageSetting').value
-        const display = document.getElementById('displaySetting').value
-
-        const { error } = await db
-            .from('users')
-            .update({ usage, display })
-            .eq('user_id', currentUser.userId)
-
+    
         if (error) {
-            alert('保存に失敗しました')
+            console.error(error)
+            return
+        }
+    
+        if (!data) return
+    
+        const planInfo = document.getElementById('planInfo')
+        const upgradeBtn = document.getElementById('upgradeBtn')
+    
+        if (data.plan === 'free') {
+    
+            planInfo.textContent =
+                `無料プラン（今月${data.monthly_count || 0}/30件使用）`
+    
+            upgradeBtn.style.display = 'block'
+    
         } else {
-            alert('設定を保存しました！')
+    
+            planInfo.textContent = '有料プラン（無制限）'
+    
+            upgradeBtn.style.display = 'none'
         }
     }
 
@@ -1037,6 +1047,143 @@
 
         if (page === 'records') loadRecords()
         if (page === 'chart') loadCharts()
+    }
+
+    // ===== マイページ：修正 =====
+    async function openEditRecord(recordId) {
+    
+        const record = allRecords.find(r => r.id === recordId)
+    
+        if (!record) {
+            alert('対象データが見つかりません')
+            return
+        }
+    
+        const beforeData = { ...record }
+    
+        const date = prompt('日付を入力してください', record.date || '')
+        if (date === null) return
+    
+        const store = prompt('支払先を入力してください', record.store || '')
+        if (store === null) return
+    
+        const item = prompt('内容を入力してください', record.item || '')
+        if (item === null) return
+    
+        const amountText = prompt('金額を入力してください', record.amount || '')
+        if (amountText === null) return
+    
+        const account = prompt('勘定科目を入力してください', record.account || '')
+        if (account === null) return
+    
+        const payment = prompt('支払方法を入力してください', record.payment || '')
+        if (payment === null) return
+    
+        const updated = {
+            date: date,
+            store: store,
+            item: item,
+            amount: Number(String(amountText).replace(/[^\d]/g, '')),
+            account: account,
+            payment: payment
+        }
+    
+        const { error } = await db
+            .from('records')
+            .update(updated)
+            .eq('id', recordId)
+            .eq('user_id', currentUser.userId)
+    
+        if (error) {
+            console.error(error)
+            alert('修正に失敗しました')
+            return
+        }
+    
+        await db
+            .from('record_logs')
+            .insert([{
+                user_id: currentUser.userId,
+                record_id: recordId,
+                action: 'mypage_update',
+                before_data: beforeData,
+                after_data: updated,
+                source: 'LIFF',
+                memo: 'マイページから修正'
+            }])
+    
+        alert('修正しました')
+    
+        await loadAllData()
+        loadRecords()
+        loadHomeData()
+    }
+
+    // ===== マイページ：削除 =====
+    async function deleteRecordFromPage(recordId) {
+    
+        const record = allRecords.find(r => r.id === recordId)
+    
+        if (!record) {
+            alert('対象データが見つかりません')
+            return
+        }
+    
+        const ok = confirm(
+            `このデータを削除しますか？\n\n` +
+            `日付：${record.date || ''}\n` +
+            `支払先：${record.store || ''}\n` +
+            `内容：${record.item || ''}\n` +
+            `金額：${Number(record.amount || 0).toLocaleString()}円\n` +
+            `勘定科目：${record.account || ''}\n` +
+            `支払方法：${record.payment || ''}`
+        )
+    
+        if (!ok) return
+    
+        await db
+            .from('deleted_records')
+            .insert([{
+                original_record_id: record.id,
+                user_id: currentUser.userId,
+                date: record.date,
+                store: record.store,
+                item: record.item,
+                amount: record.amount,
+                account: record.account,
+                payment: record.payment,
+                deleted_from: 'LIFF'
+            }])
+    
+        await db
+            .from('record_logs')
+            .insert([{
+                user_id: currentUser.userId,
+                record_id: record.id,
+                action: 'mypage_delete',
+                before_data: record,
+                after_data: null,
+                source: 'LIFF',
+                memo: 'マイページから削除'
+            }])
+    
+        const { error } = await db
+            .from('records')
+            .delete()
+            .eq('id', recordId)
+            .eq('user_id', currentUser.userId)
+    
+        if (error) {
+            console.error(error)
+            alert('削除に失敗しました')
+            return
+        }
+    
+        alert('削除しました')
+    
+        await loadAllData()
+        loadRecords()
+        loadHomeData()
     }
 
     // ===== 初期化 =====
