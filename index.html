@@ -187,10 +187,83 @@
             cursor: pointer;
         }
         .login-btn:hover { background: #05b34b; }
+
+        .modal-bg {
+            display: none;
+            position: fixed;
+            z-index: 9999;
+            inset: 0;
+            background: rgba(0,0,0,0.45);
+            padding: 20px;
+        }
+        
+        .modal-box {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            max-width: 420px;
+            margin: 60px auto;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+        }
+        
+        .modal-title {
+            font-size: 22px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        
+        .modal-note {
+            font-size: 13px;
+            color: #777;
+            margin-bottom: 16px;
+            line-height: 1.6;
+        }
+        
+        .modal-input {
+            width: 100%;
+            padding: 11px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 15px;
+        }
+        
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 12px;
+        }
+        
+        .modal-buttons button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .btn-save {
+            background: #06C755;
+            color: white;
+        }
+        
+        .btn-cancel {
+            background: #eee;
+            color: #555;
+        }
+        
+        .btn-delete {
+            background: #f44336;
+            color: white;
+        } 
     </style>
+       
 </head>
 <body>
-
+    
 <!-- ログインページ -->
 <div id="loginPage" class="login-page">
     <div class="login-card">
@@ -403,7 +476,49 @@
     </div>
 </div>
 
+<!-- 修正モーダル -->
+<div id="editModal" class="modal-bg">
+    <div class="modal-box">
+        <div class="modal-title">修正内容を入力してください</div>
+        <div class="modal-note">
+            修正しない項目はそのままでOKです。<br>
+            変更したい項目だけ書き換えて「保存する」を押してください。
+        </div>
+
+        <input id="editDate" class="modal-input" placeholder="日付">
+        <input id="editStore" class="modal-input" placeholder="支払先">
+        <input id="editItem" class="modal-input" placeholder="内容">
+        <input id="editAmount" class="modal-input" placeholder="金額">
+        <input id="editAccount" class="modal-input" placeholder="勘定科目">
+        <input id="editPayment" class="modal-input" placeholder="支払方法">
+
+        <div class="modal-buttons">
+            <button class="btn-cancel" onclick="closeEditModal()">キャンセル</button>
+            <button class="btn-save" onclick="saveEditRecord()">保存する</button>
+        </div>
+    </div>
+</div>
+
+<!-- 削除モーダル -->
+<div id="deleteModal" class="modal-bg">
+    <div class="modal-box">
+        <div class="modal-title">このデータを削除しますか？</div>
+        <div class="modal-note">
+            削除すると一覧から消えます。<br>
+            削除前の内容はバックアップとしてDBに保存されます。
+        </div>
+
+        <div id="deleteRecordText" style="font-size:14px; line-height:1.8; margin-bottom:16px;"></div>
+
+        <div class="modal-buttons">
+            <button class="btn-cancel" onclick="closeDeleteModal()">キャンセル</button>
+            <button class="btn-delete" onclick="confirmDeleteRecord()">削除する</button>
+        </div>
+    </div>
+</div>
+
 <script>
+    
     // ===== Supabase設定 =====
     const SUPABASE_URL = 'https://ewmxcvyrfqdhujcldrca.supabase.co'
     const SUPABASE_KEY = 'sb_publishable_p4BmWWdsN6bQ-0zjozrnNQ_IjUBJSeo'
@@ -413,6 +528,8 @@
 
     let currentUser = null
     let allRecords = []
+    let editingRecordId = null
+    let deletingRecordId = null
     let currentMonth = new Date()
     let homeChartInstance = null
     let monthlyChartInstance = null
@@ -1052,7 +1169,7 @@
         if (page === 'chart') loadCharts()
     }
 
-    // ===== マイページ：修正 =====
+    // ===== マイページ：修正モーダルを開く =====
     async function openEditRecord(recordId) {
     
         const record = allRecords.find(r => String(r.id) === String(recordId))
@@ -1062,39 +1179,51 @@
             return
         }
     
+        editingRecordId = recordId
+    
+        document.getElementById('editDate').value = record.date || ''
+        document.getElementById('editStore').value = record.store || ''
+        document.getElementById('editItem').value = record.item || ''
+        document.getElementById('editAmount').value = record.amount || ''
+        document.getElementById('editAccount').value = record.account || ''
+        document.getElementById('editPayment').value = record.payment || ''
+    
+        document.getElementById('editModal').style.display = 'block'
+    }
+    
+    
+    // ===== 修正モーダルを閉じる =====
+    function closeEditModal() {
+        editingRecordId = null
+        document.getElementById('editModal').style.display = 'none'
+    }
+    
+    
+    // ===== マイページ：修正保存 =====
+    async function saveEditRecord() {
+    
+        const record = allRecords.find(r => String(r.id) === String(editingRecordId))
+    
+        if (!record) {
+            alert('対象データが見つかりません')
+            return
+        }
+    
         const beforeData = { ...record }
     
-        const date = prompt('日付を入力してください', record.date || '')
-        if (date === null) return
-    
-        const store = prompt('支払先を入力してください', record.store || '')
-        if (store === null) return
-    
-        const item = prompt('内容を入力してください', record.item || '')
-        if (item === null) return
-    
-        const amountText = prompt('金額を入力してください', record.amount || '')
-        if (amountText === null) return
-    
-        const account = prompt('勘定科目を入力してください', record.account || '')
-        if (account === null) return
-    
-        const payment = prompt('支払方法を入力してください', record.payment || '')
-        if (payment === null) return
-    
         const updated = {
-            date: date,
-            store: store,
-            item: item,
-            amount: Number(String(amountText).replace(/[^\d]/g, '')),
-            account: account,
-            payment: payment
+            date: document.getElementById('editDate').value,
+            store: document.getElementById('editStore').value,
+            item: document.getElementById('editItem').value,
+            amount: Number(String(document.getElementById('editAmount').value).replace(/[^\d]/g, '')),
+            account: document.getElementById('editAccount').value,
+            payment: document.getElementById('editPayment').value
         }
     
         const { error } = await db
             .from('records')
             .update(updated)
-            .eq('id', recordId)
+            .eq('id', editingRecordId)
             .eq('user_id', currentUser.userId)
     
         if (error) {
@@ -1107,13 +1236,15 @@
             .from('record_logs')
             .insert([{
                 user_id: currentUser.userId,
-                record_id: recordId,
+                record_id: editingRecordId,
                 action: 'mypage_update',
                 before_data: beforeData,
                 after_data: updated,
                 source: 'LIFF',
                 memo: 'マイページから修正'
             }])
+    
+        closeEditModal()
     
         alert('修正しました')
     
@@ -1122,7 +1253,7 @@
         loadHomeData()
     }
 
-    // ===== マイページ：削除 =====
+    // ===== マイページ：削除モーダルを開く =====
     async function deleteRecordFromPage(recordId) {
     
         const record = allRecords.find(r => String(r.id) === String(recordId))
@@ -1132,17 +1263,37 @@
             return
         }
     
-        const ok = confirm(
-            `このデータを削除しますか？\n\n` +
-            `日付：${record.date || ''}\n` +
-            `支払先：${record.store || ''}\n` +
-            `内容：${record.item || ''}\n` +
-            `金額：${Number(record.amount || 0).toLocaleString()}円\n` +
-            `勘定科目：${record.account || ''}\n` +
-            `支払方法：${record.payment || ''}`
-        )
+        deletingRecordId = recordId
     
-        if (!ok) return
+        document.getElementById('deleteRecordText').innerHTML = `
+            日付：${record.date || ''}<br>
+            支払先：${record.store || ''}<br>
+            内容：${record.item || ''}<br>
+            金額：${Number(record.amount || 0).toLocaleString()}円<br>
+            勘定科目：${record.account || ''}<br>
+            支払方法：${record.payment || ''}
+        `
+    
+        document.getElementById('deleteModal').style.display = 'block'
+    }
+    
+    
+    // ===== 削除モーダルを閉じる =====
+    function closeDeleteModal() {
+        deletingRecordId = null
+        document.getElementById('deleteModal').style.display = 'none'
+    }
+    
+    
+    // ===== マイページ：削除確定 =====
+    async function confirmDeleteRecord() {
+    
+        const record = allRecords.find(r => String(r.id) === String(deletingRecordId))
+    
+        if (!record) {
+            alert('対象データが見つかりません')
+            return
+        }
     
         await db
             .from('deleted_records')
@@ -1173,7 +1324,7 @@
         const { error } = await db
             .from('records')
             .delete()
-            .eq('id', recordId)
+            .eq('id', deletingRecordId)
             .eq('user_id', currentUser.userId)
     
         if (error) {
@@ -1181,6 +1332,8 @@
             alert('削除に失敗しました')
             return
         }
+    
+        closeDeleteModal()
     
         alert('削除しました')
     
