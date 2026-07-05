@@ -285,6 +285,46 @@
             outline: 2px solid #06C755;
             border-color: #06C755;
         }
+
+        :root {
+            --keyboard-height: 0px;
+        }
+        
+        .modal-bg {
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .modal-box {
+            max-height: calc(100dvh - 40px - var(--keyboard-height));
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            margin: 20px auto calc(24px + var(--keyboard-height)) auto;
+        }
+        
+        .modal-input {
+            scroll-margin-bottom: calc(120px + var(--keyboard-height));
+        }
+        
+        .modal-input:focus {
+            outline: 2px solid #06C755;
+            border-color: #06C755;
+        }
+        
+        @media (max-width: 600px) {
+            .modal-bg {
+                padding: 12px;
+            }
+        
+            .modal-box {
+                max-height: calc(100dvh - 24px - var(--keyboard-height));
+                margin: 12px auto calc(24px + var(--keyboard-height)) auto;
+            }
+        
+            .modal-input {
+                font-size: 16px;
+            }
+        }
     </style>
        
 </head>
@@ -1197,28 +1237,37 @@
         document.getElementById('messageModalText').innerHTML = message
         document.getElementById('messageModal').style.display = 'block'
     }
+
+    // ===== スマホキーボード対応 =====
+    function setupKeyboardHeightSupport() {
     
-    // ===== 入力欄タップ時に自動で見える位置へ移動 =====
-    function setupModalInputAutoScroll() {
+        if (!window.visualViewport) return
     
-        const inputs = document.querySelectorAll('.modal-input')
+        function updateKeyboardHeight() {
     
-        inputs.forEach(input => {
+            const keyboardHeight =
+                Math.max(
+                    0,
+                    window.innerHeight - window.visualViewport.height
+                )
     
-            input.addEventListener('focus', () => {
+            document.documentElement.style.setProperty(
+                '--keyboard-height',
+                keyboardHeight + 'px'
+            )
+        }
     
-                setTimeout(() => {
+        window.visualViewport.addEventListener(
+            'resize',
+            updateKeyboardHeight
+        )
     
-                    input.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'center'
-                    })
+        window.visualViewport.addEventListener(
+            'scroll',
+            updateKeyboardHeight
+        )
     
-                }, 300)
-    
-            })
-    
-        })
+        updateKeyboardHeight()
     }
     
     // ===== メッセージモーダルを閉じる =====
@@ -1425,7 +1474,7 @@
     }
 
     // ===== 初期化 =====
-    setupModalInputAutoScroll()
+    setupKeyboardHeightSupport()
     initLiff()
 </script>
 </body>
