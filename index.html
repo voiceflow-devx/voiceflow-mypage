@@ -325,6 +325,15 @@
                 font-size: 16px;
             }
         }
+        
+        .modal-box {
+            scroll-behavior: smooth;
+        }
+        
+        .modal-input {
+            scroll-margin-top: 90px;
+            scroll-margin-bottom: 140px;
+        }
     </style>
        
 </head>
@@ -1269,6 +1278,50 @@
     
         updateKeyboardHeight()
     }
+
+    // ===== モーダル入力欄を選択した時だけ自然に表示位置を調整 =====
+    function setupModalSmartFocus() {
+    
+        const inputs = document.querySelectorAll('.modal-input')
+    
+        inputs.forEach(input => {
+    
+            input.addEventListener('focus', () => {
+    
+                setTimeout(() => {
+    
+                    const modalBox = input.closest('.modal-box')
+    
+                    if (!modalBox) return
+    
+                    const inputRect = input.getBoundingClientRect()
+                    const boxRect = modalBox.getBoundingClientRect()
+    
+                    const safeTop = boxRect.top + 80
+                    const safeBottom = boxRect.bottom - 120
+    
+                    if (inputRect.bottom > safeBottom) {
+    
+                        modalBox.scrollBy({
+                            top: inputRect.bottom - safeBottom,
+                            behavior: 'smooth'
+                        })
+    
+                    } else if (inputRect.top < safeTop) {
+    
+                        modalBox.scrollBy({
+                            top: inputRect.top - safeTop,
+                            behavior: 'smooth'
+                        })
+    
+                    }
+    
+                }, 450)
+    
+            })
+    
+        })
+    }
     
     // ===== メッセージモーダルを閉じる =====
     function closeMessageModal() {
@@ -1475,6 +1528,7 @@
 
     // ===== 初期化 =====
     setupKeyboardHeightSupport()
+    setupModalSmartFocus()
     initLiff()
 </script>
 </body>
