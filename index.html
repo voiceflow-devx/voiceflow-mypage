@@ -837,12 +837,12 @@
                     <span class="badge">${r.account || ''}</span>
         
                     <div style="display:flex; gap:8px; margin-top:10px;">
-                        <button onclick="openEditRecord('${r.id}')"
+                        <button onclick="openEditRecord('${String(r.id)}')"
                             style="flex:1; padding:8px; border:none; border-radius:8px; background:#06C755; color:white; font-weight:bold;">
                             修正
                         </button>
         
-                        <button onclick="deleteRecordFromPage('${r.id}')"
+                        <button onclick="deleteRecordFromPage('${String(r.id)}')"
                             style="flex:1; padding:8px; border:none; border-radius:8px; background:#f44336; color:white; font-weight:bold;">
                             削除
                         </button>
@@ -1055,7 +1055,7 @@
     // ===== マイページ：修正 =====
     async function openEditRecord(recordId) {
     
-        const record = allRecords.find(r => r.id === recordId)
+        const record = allRecords.find(r => String(r.id) === String(recordId))
     
         if (!record) {
             alert('対象データが見つかりません')
@@ -1125,7 +1125,7 @@
     // ===== マイページ：削除 =====
     async function deleteRecordFromPage(recordId) {
     
-        const record = allRecords.find(r => r.id === recordId)
+        const record = allRecords.find(r => String(r.id) === String(recordId))
     
         if (!record) {
             alert('対象データが見つかりません')
