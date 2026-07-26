@@ -667,6 +667,58 @@
             )
         }
     
+        // ===== IDトークン期限切れ時に再ログイン =====
+        if (response.status === 401) {
+    
+            const alreadyRetried =
+                sessionStorage.getItem(
+                    'line_reauth_attempted'
+                ) === '1'
+    
+            if (!alreadyRetried) {
+    
+                sessionStorage.setItem(
+                    'line_reauth_attempted',
+                    '1'
+                )
+    
+                try {
+    
+                    if (liff.isLoggedIn()) {
+                        liff.logout()
+                    }
+    
+                } catch (logoutError) {
+    
+                    console.error(
+                        'LIFFログアウトエラー',
+                        logoutError
+                    )
+                }
+    
+                // LINE内のLIFFブラウザの場合
+                if (liff.isInClient()) {
+    
+                    window.location.href =
+                        `https://liff.line.me/${LIFF_ID}`
+    
+                } else {
+    
+                    // 通常ブラウザの場合
+                    const redirectUrl =
+                        window.location.origin
+                        + window.location.pathname
+    
+                    liff.login({
+                        redirectUri: redirectUrl
+                    })
+                }
+    
+                // 画面遷移するため、以降の処理を停止
+                return new Promise(() => {})
+            }
+        }
+    
         if (
             !response.ok
             || !result
@@ -678,6 +730,11 @@
                 || 'データの取得に失敗しました'
             )
         }
+    
+        // 正常にログインできたら再試行記録を削除
+        sessionStorage.removeItem(
+            'line_reauth_attempted'
+        )
     
         return result
     }
