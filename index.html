@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>マイページ - 経費記録</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <style>
@@ -608,13 +607,6 @@
 
 <script>
     
-    // ===== Supabase設定 =====
-    const SUPABASE_URL = 'https://ewmxcvyrfqdhujcldrca.supabase.co'
-    const SUPABASE_KEY = 'sb_publishable_p4BmWWdsN6bQ-0zjozrnNQ_IjUBJSeo'
-
-    const { createClient } = supabase
-    const db = createClient(SUPABASE_URL, SUPABASE_KEY)
-
     // ===== Render API設定 =====
     const API_BASE_URL =
         'https://voiceflow-8t12.onrender.com'
