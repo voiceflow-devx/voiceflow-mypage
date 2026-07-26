@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>管理画面</title>
+
+    <script
+        src="https://static.line-scdn.net/liff/edge/2/sdk.js">
+    </script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 24px;
+            background: #f5f5f5;
+            color: #333;
+            font-family:
+                -apple-system,
+                BlinkMacSystemFont,
+                "Segoe UI",
+                sans-serif;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            margin: 40px auto;
+        }
+
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow:
+                0 3px 16px
+                rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            margin: 0 0 12px;
+            font-size: 24px;
+        }
+
+        .description {
+            margin-bottom: 24px;
+            color: #777;
+            line-height: 1.6;
+        }
+
+        .status {
+            padding: 16px;
+            border-radius: 10px;
+            background: #f5f5f5;
+            line-height: 1.7;
+        }
+
+        .success {
+            background: #e8f5e9;
+            color: #087f23;
+        }
+
+        .error {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .loading {
+            color: #666;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+
+        <div class="card">
+
+            <h1>管理ダッシュボード</h1>
+
+            <div class="description">
+                管理者認証を確認しています。
+            </div>
+
+            <div
+                id="status"
+                class="status loading">
+                認証処理中です...
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+
+        // ===== Render API =====
+        const API_BASE_URL =
+            'https://voiceflow-8t12.onrender.com'
+
+        // ===== LIFF ID =====
+        const LIFF_ID =
+            '2010043850-PaxG9LLM'
+
+
+        // ===== メッセージ表示 =====
+        function showStatus(
+            message,
+            type = 'loading'
+        ) {
+
+            const statusElement =
+                document.getElementById(
+                    'status'
+                )
+
+            statusElement.textContent =
+                message
+
+            statusElement.className =
+                `status ${type}`
+        }
+
+
+        // ===== LINEログインまたはLIFF再起動 =====
+        function restartLineLogin() {
+
+            const redirectUrl =
+                window.location.origin
+                + window.location.pathname
+
+            if (liff.isInClient()) {
+
+                window.location.href =
+                    `https://liff.line.me/${LIFF_ID}`
+
+                return
+            }
+
+            liff.login({
+                redirectUri: redirectUrl
+            })
+        }
+
+
+        // ===== 管理者認証APIを実行 =====
+        async function checkAdminAuth() {
+
+            const idToken =
+                liff.getIDToken()
+
+            if (!idToken) {
+
+                throw new Error(
+                    'LINE認証情報を取得できませんでした'
+                )
+            }
+
+            const response = await fetch(
+                `${API_BASE_URL}/api/admin/auth-check`,
+                {
+                    method: 'GET',
+
+                    headers: {
+                        'Authorization':
+                            `Bearer ${idToken}`
+                    },
+
+                    cache: 'no-store'
+                }
+            )
+
+            let result = null
+
+            try {
+
+                result =
+                    await response.json()
+
+            } catch (error) {
+
+                throw new Error(
+                    'サーバーから正しい応答がありません'
+                )
+            }
+
+
+            // ===== IDトークン期限切れ =====
+            if (response.status === 401) {
+
+                const alreadyRetried =
+                    sessionStorage.getItem(
+                        'admin_reauth_attempted'
+                    ) === '1'
+
+                if (!alreadyRetried) {
+
+                    sessionStorage.setItem(
+                        'admin_reauth_attempted',
+                        '1'
+                    )
+
+                    try {
+
+                        if (liff.isLoggedIn()) {
+                            liff.logout()
+                        }
+
+                    } catch (error) {
+
+                        console.error(
+                            'LIFFログアウトエラー',
+                            error
+                        )
+                    }
+
+                    restartLineLogin()
+
+                    return new Promise(() => {})
+                }
+            }
+
+
+            // ===== 管理者ではない =====
+            if (response.status === 403) {
+
+                throw new Error(
+                    'このLINEアカウントには管理者権限がありません'
+                )
+            }
+
+
+            if (
+                !response.ok
+                || !result
+                || result.success !== true
+            ) {
+
+                throw new Error(
+                    result?.error
+                    || '管理者認証に失敗しました'
+                )
+            }
+
+            sessionStorage.removeItem(
+                'admin_reauth_attempted'
+            )
+
+            showStatus(
+                '管理者認証に成功しました。管理画面を利用できます。',
+                'success'
+            )
+        }
+
+
+        // ===== 初期化 =====
+        async function initAdminPage() {
+
+            try {
+
+                await liff.init({
+                    liffId: LIFF_ID
+                })
+
+                if (!liff.isLoggedIn()) {
+
+                    showStatus(
+                        'LINEログイン画面へ移動します...',
+                        'loading'
+                    )
+
+                    restartLineLogin()
+
+                    return
+                }
+
+                await checkAdminAuth()
+
+            } catch (error) {
+
+                console.error(
+                    '管理画面認証エラー',
+                    error
+                )
+
+                showStatus(
+                    error.message
+                    || '管理者認証に失敗しました',
+                    'error'
+                )
+            }
+        }
+
+
+        initAdminPage()
+
+    </script>
+
+</body>
+</html>
