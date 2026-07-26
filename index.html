@@ -689,6 +689,78 @@
     
         return result
     }
+
+    // ===== マイページAPI共通処理 =====
+    async function requestMypageApi(
+        path,
+        method,
+        body = null
+    ) {
+    
+        const idToken =
+            liff.getIDToken()
+    
+        if (!idToken) {
+    
+            throw new Error(
+                'LINE認証情報を取得できませんでした'
+            )
+        }
+    
+        const options = {
+            method: method,
+    
+            headers: {
+                'Authorization':
+                    `Bearer ${idToken}`
+            },
+    
+            cache: 'no-store'
+        }
+    
+        if (body !== null) {
+    
+            options.headers[
+                'Content-Type'
+            ] = 'application/json'
+    
+            options.body =
+                JSON.stringify(body)
+        }
+    
+        const response = await fetch(
+            `${API_BASE_URL}${path}`,
+            options
+        )
+    
+        let result = null
+    
+        try {
+    
+            result =
+                await response.json()
+    
+        } catch (error) {
+    
+            throw new Error(
+                'サーバーから正しい応答がありません'
+            )
+        }
+    
+        if (
+            !response.ok
+            || !result
+            || result.success !== true
+        ) {
+    
+            throw new Error(
+                result?.error
+                || '処理に失敗しました'
+            )
+        }
+    
+        return result
+    }
     
     // ===== LIFF 初期化 =====
     const LIFF_ID = '2010043850-PaxG9LLM'
@@ -1465,77 +1537,108 @@
         document.getElementById('editModal').style.display = 'none'
     }
     
-    
     // ===== マイページ：修正保存 =====
     async function saveEditRecord() {
     
-        const record = allRecords.find(r => String(r.id) === String(editingRecordId))
+        const targetRecordId =
+            editingRecordId
+    
+        const record =
+            allRecords.find(
+                r =>
+                    String(r.id)
+                    === String(targetRecordId)
+            )
     
         if (!record) {
+    
             showMessageModal(
                 '対象データが見つかりません',
                 'ページを再読み込みしてからもう一度お試しください。'
             )
+    
             return
         }
-    
-        const beforeData = { ...record }
     
         const updated = {
-            date: document.getElementById('editDate').value,
-            store: document.getElementById('editStore').value,
-            item: document.getElementById('editItem').value,
-            amount: Number(String(document.getElementById('editAmount').value).replace(/[^\d]/g, '')),
-            account: document.getElementById('editAccount').value,
-            payment: document.getElementById('editPayment').value
+            date:
+                document.getElementById(
+                    'editDate'
+                ).value,
+    
+            store:
+                document.getElementById(
+                    'editStore'
+                ).value,
+    
+            item:
+                document.getElementById(
+                    'editItem'
+                ).value,
+    
+            amount:
+                document.getElementById(
+                    'editAmount'
+                ).value,
+    
+            account:
+                document.getElementById(
+                    'editAccount'
+                ).value,
+    
+            payment:
+                document.getElementById(
+                    'editPayment'
+                ).value
         }
     
-        const { error } = await db
-            .from('records')
-            .update(updated)
-            .eq('id', editingRecordId)
-            .eq('user_id', currentUser.userId)
+        try {
     
-        if (error) {
-            console.error(error)
+            await requestMypageApi(
+                (
+                    '/api/mypage/records/'
+                    + encodeURIComponent(
+                        targetRecordId
+                    )
+                ),
+                'PATCH',
+                updated
+            )
+    
+            closeEditModal()
+    
+            const refreshed =
+                await loadAllData()
+    
+            if (!refreshed) {
+    
+                return
+            }
+    
+            loadRecords()
+            await loadHomeData()
+            await loadSettings()
+    
+            showMessageModal(
+                '修正しました',
+                'マイページのデータを更新しました。<br>操作履歴もDBに保存されています。'
+            )
+    
+        } catch (error) {
+    
+            console.error(
+                '経費修正エラー',
+                error
+            )
+    
             showMessageModal(
                 '修正に失敗しました',
-                '時間をおいてもう一度お試しください。'
+                (
+                    error.message
+                    || '時間をおいてもう一度お試しください。'
+                )
             )
-            return
         }
-
-        const { error: logError } = await db
-            .from('record_logs')
-            .insert([{
-                user_id: currentUser.userId,
-                record_id: editingRecordId,
-                action: 'mypage_update',
-                before_data: beforeData,
-                after_data: updated,
-                source: 'LIFF',
-                memo: 'マイページから修正'
-            }])
-        
-        if (logError) {
-            console.error(logError)
-            showMessageModal(
-                'ログ保存に失敗しました',
-                logError.message
-            )
-            return
-        }
-    
-        closeEditModal()
-    
-        showMessageModal(
-            '修正しました',
-            'マイページのデータを更新しました。<br>操作履歴もDBに保存されています。'
-        )
-    
-        await loadAllData()
-        loadRecords()
-        loadHomeData()
     }
 
     // ===== マイページ：削除モーダルを開く =====
@@ -1569,68 +1672,75 @@
         document.getElementById('deleteModal').style.display = 'none'
     }
     
-    
     // ===== マイページ：削除確定 =====
     async function confirmDeleteRecord() {
     
-        const record = allRecords.find(r => String(r.id) === String(deletingRecordId))
+        const targetRecordId =
+            deletingRecordId
+    
+        const record =
+            allRecords.find(
+                r =>
+                    String(r.id)
+                    === String(targetRecordId)
+            )
     
         if (!record) {
-            alert('対象データが見つかりません')
+    
+            showMessageModal(
+                '対象データが見つかりません',
+                'ページを再読み込みしてからもう一度お試しください。'
+            )
+    
             return
         }
     
-        await db
-            .from('deleted_records')
-            .insert([{
-                original_record_id: record.id,
-                user_id: currentUser.userId,
-                date: record.date,
-                store: record.store,
-                item: record.item,
-                amount: record.amount,
-                account: record.account,
-                payment: record.payment,
-                deleted_from: 'LIFF'
-            }])
+        try {
     
-        await db
-            .from('record_logs')
-            .insert([{
-                user_id: currentUser.userId,
-                record_id: record.id,
-                action: 'mypage_delete',
-                before_data: record,
-                after_data: null,
-                source: 'LIFF',
-                memo: 'マイページから削除'
-            }])
+            await requestMypageApi(
+                (
+                    '/api/mypage/records/'
+                    + encodeURIComponent(
+                        targetRecordId
+                    )
+                ),
+                'DELETE'
+            )
     
-        const { error } = await db
-            .from('records')
-            .delete()
-            .eq('id', deletingRecordId)
-            .eq('user_id', currentUser.userId)
+            closeDeleteModal()
     
-        if (error) {
-            console.error(error)
+            const refreshed =
+                await loadAllData()
+    
+            if (!refreshed) {
+    
+                return
+            }
+    
+            loadRecords()
+            await loadHomeData()
+            await loadSettings()
+    
+            showMessageModal(
+                '削除しました',
+                '一覧から削除しました。<br>削除前のデータはバックアップとしてDBに保存されています。'
+            )
+    
+        } catch (error) {
+    
+            console.error(
+                '経費削除エラー',
+                error
+            )
+    
             showMessageModal(
                 '削除に失敗しました',
-                '時間をおいてもう一度お試しください。'
+                (
+                    error.message
+                    || '時間をおいてもう一度お試しください。'
+                )
             )
-            return
         }
-    
-        closeDeleteModal()
-    
-        showMessageModal(
-            '削除しました',
-            '一覧から削除しました。<br>削除前のデータはバックアップとしてDBに保存されています。'
-        )
-    
-        await loadAllData()
-        loadRecords()
-        loadHomeData()
     }
 
     // ===== 初期化 =====
