@@ -795,7 +795,56 @@
                 'サーバーから正しい応答がありません'
             )
         }
+
+    // ===== IDトークン期限切れ時に再ログイン =====
+    if (response.status === 401) {
     
+        const alreadyRetried =
+            sessionStorage.getItem(
+                'line_reauth_attempted'
+            ) === '1'
+    
+        if (!alreadyRetried) {
+    
+            sessionStorage.setItem(
+                'line_reauth_attempted',
+                '1'
+            )
+    
+            try {
+    
+                if (liff.isLoggedIn()) {
+                    liff.logout()
+                }
+    
+            } catch (logoutError) {
+    
+                console.error(
+                    'LIFFログアウトエラー',
+                    logoutError
+                )
+            }
+    
+            if (liff.isInClient()) {
+    
+                window.location.href =
+                    `https://liff.line.me/${LIFF_ID}`
+    
+            } else {
+    
+                const redirectUrl =
+                    window.location.origin
+                    + window.location.pathname
+    
+                liff.login({
+                    redirectUri: redirectUrl
+                })
+            }
+    
+            return new Promise(() => {})
+        }
+    }
+        
         if (
             !response.ok
             || !result
