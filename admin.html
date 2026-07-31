@@ -181,6 +181,46 @@
                     </div>
 
                     <div class="metric-card">
+                        <div class="metric-label">無料ユーザー</div>
+                        <div class="metric-value">
+                            <span id="freeUsers">-</span>
+                            <span class="metric-unit">人</span>
+                        </div>
+                    </div>
+                    
+                    <div class="metric-card">
+                        <div class="metric-label">980円プラン</div>
+                        <div class="metric-value">
+                            <span id="plan980Users">-</span>
+                            <span class="metric-unit">人</span>
+                        </div>
+                    </div>
+                    
+                    <div class="metric-card">
+                        <div class="metric-label">1,280円プラン</div>
+                        <div class="metric-value">
+                            <span id="plan1280Users">-</span>
+                            <span class="metric-unit">人</span>
+                        </div>
+                    </div>
+                    
+                    <div class="metric-card">
+                        <div class="metric-label">有料会員合計</div>
+                        <div class="metric-value">
+                            <span id="paidUsers">-</span>
+                            <span class="metric-unit">人</span>
+                        </div>
+                    </div>
+                    
+                    <div class="metric-card">
+                        <div class="metric-label">月間売上見込み</div>
+                        <div class="metric-value">
+                            <span id="monthlyRevenue">-</span>
+                            <span class="metric-unit">円</span>
+                        </div>
+                    </div>
+                    
+                    <div class="metric-card">
                         <div class="metric-label">今日の登録件数</div>
                         <div class="metric-value">
                             <span id="todayRecords">-</span>
@@ -411,6 +451,41 @@
             ).textContent =
                 formatCount(metrics.total_users)
 
+            document.getElementById(
+                'freeUsers'
+            ).textContent =
+                formatCount(
+                    metrics.free_users
+                )
+            
+            document.getElementById(
+                'plan980Users'
+            ).textContent =
+                formatCount(
+                    metrics.plan_980_users
+                )
+            
+            document.getElementById(
+                'plan1280Users'
+            ).textContent =
+                formatCount(
+                    metrics.plan_1280_users
+                )
+            
+            document.getElementById(
+                'paidUsers'
+            ).textContent =
+                formatCount(
+                    metrics.paid_users
+                )
+            
+            document.getElementById(
+                'monthlyRevenue'
+            ).textContent =
+                formatCount(
+                    metrics.monthly_revenue_yen
+                )
+            
             document.getElementById(
                 'todayRecords'
             ).textContent =
