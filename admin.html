@@ -2,38 +2,26 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>管理画面</title>
-
-    <script
-        src="https://static.line-scdn.net/liff/edge/2/sdk.js">
-    </script>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 
     <style>
-        * {
-            box-sizing: border-box;
-        }
+        * { box-sizing: border-box; }
 
         body {
             margin: 0;
             padding: 24px;
             background: #f5f5f5;
             color: #333;
-            font-family:
-                -apple-system,
-                BlinkMacSystemFont,
-                "Segoe UI",
-                sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         }
+
+        button { font: inherit; }
 
         .container {
             width: 100%;
-            max-width: 600px;
+            max-width: 760px;
             margin: 40px auto;
         }
 
@@ -41,9 +29,7 @@
             background: white;
             border-radius: 16px;
             padding: 24px;
-            box-shadow:
-                0 3px 16px
-                rgba(0, 0, 0, 0.1);
+            box-shadow: 0 3px 16px rgba(0, 0, 0, 0.1);
         }
 
         h1 {
@@ -74,36 +60,174 @@
             color: #c62828;
         }
 
-        .loading {
-            color: #666;
+        .loading { color: #666; }
+
+        .dashboard-content {
+            display: none;
+            margin-top: 20px;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .metric-card {
+            min-width: 0;
+            padding: 18px 14px;
+            background: #fafafa;
+            border: 1px solid #eee;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .metric-label {
+            margin-bottom: 8px;
+            color: #777;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .metric-value {
+            color: #222;
+            font-size: 30px;
+            font-weight: bold;
+            line-height: 1.2;
+        }
+
+        .metric-unit {
+            margin-left: 2px;
+            color: #777;
+            font-size: 13px;
+            font-weight: normal;
+        }
+
+        .updated-at {
+            margin-top: 16px;
+            color: #999;
+            font-size: 12px;
+            text-align: right;
+        }
+
+        .button-row {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .action-button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .refresh-button {
+            background: #222;
+            color: white;
+        }
+
+        .back-button {
+            background: #eeeeee;
+            color: #555;
+        }
+
+        .action-button:disabled {
+            cursor: not-allowed;
+            opacity: 0.55;
+        }
+
+        @media (min-width: 720px) {
+            .metrics-grid {
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 480px) {
+            body { padding: 14px; }
+            .container { margin: 18px auto; }
+            .card { padding: 18px; }
+            .metric-value { font-size: 26px; }
+            .button-row { flex-direction: column; }
         }
     </style>
 </head>
 
 <body>
-
     <div class="container">
-
         <div class="card">
-
             <h1>管理ダッシュボード</h1>
 
             <div class="description">
-                管理者認証を確認しています。
+                ユーザー数や経費登録状況を確認できます。
             </div>
 
-            <div
-                id="status"
-                class="status loading">
+            <div id="status" class="status loading">
                 認証処理中です...
             </div>
 
-        </div>
+            <div id="dashboardContent" class="dashboard-content">
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-label">ユーザー総数</div>
+                        <div class="metric-value">
+                            <span id="totalUsers">-</span>
+                            <span class="metric-unit">人</span>
+                        </div>
+                    </div>
 
+                    <div class="metric-card">
+                        <div class="metric-label">今日の登録件数</div>
+                        <div class="metric-value">
+                            <span id="todayRecords">-</span>
+                            <span class="metric-unit">件</span>
+                        </div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-label">今月の登録件数</div>
+                        <div class="metric-value">
+                            <span id="monthRecords">-</span>
+                            <span class="metric-unit">件</span>
+                        </div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-label">確認途中の件数</div>
+                        <div class="metric-value">
+                            <span id="pendingCount">-</span>
+                            <span class="metric-unit">件</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="updatedAt" class="updated-at">
+                    最終更新：-
+                </div>
+
+                <div class="button-row">
+                    <button
+                        id="refreshButton"
+                        class="action-button refresh-button"
+                        onclick="refreshDashboard()">
+                        最新情報に更新
+                    </button>
+
+                    <button
+                        class="action-button back-button"
+                        onclick="backToMyPage()">
+                        マイページへ戻る
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
-
         // ===== Render API =====
         const API_BASE_URL =
             'https://voiceflow-8t12.onrender.com'
@@ -114,36 +238,24 @@
 
 
         // ===== メッセージ表示 =====
-        function showStatus(
-            message,
-            type = 'loading'
-        ) {
-
+        function showStatus(message, type = 'loading') {
             const statusElement =
-                document.getElementById(
-                    'status'
-                )
+                document.getElementById('status')
 
-            statusElement.textContent =
-                message
-
-            statusElement.className =
-                `status ${type}`
+            statusElement.textContent = message
+            statusElement.className = `status ${type}`
         }
 
 
         // ===== LINEログインまたはLIFF再起動 =====
         function restartLineLogin() {
-
             const redirectUrl =
                 window.location.origin
                 + window.location.pathname
 
             if (liff.isInClient()) {
-
                 window.location.href =
                     `https://liff.line.me/${LIFF_ID}`
-
                 return
             }
 
@@ -153,29 +265,25 @@
         }
 
 
-        // ===== 管理者認証APIを実行 =====
-        async function checkAdminAuth() {
-
+        // ===== 管理者API共通処理 =====
+        async function requestAdminApi(path) {
             const idToken =
                 liff.getIDToken()
 
             if (!idToken) {
-
                 throw new Error(
                     'LINE認証情報を取得できませんでした'
                 )
             }
 
             const response = await fetch(
-                `${API_BASE_URL}/api/admin/auth-check`,
+                `${API_BASE_URL}${path}`,
                 {
                     method: 'GET',
-
                     headers: {
                         'Authorization':
                             `Bearer ${idToken}`
                     },
-
                     cache: 'no-store'
                 }
             )
@@ -183,41 +291,31 @@
             let result = null
 
             try {
-
-                result =
-                    await response.json()
-
+                result = await response.json()
             } catch (error) {
-
                 throw new Error(
                     'サーバーから正しい応答がありません'
                 )
             }
 
-
             // ===== IDトークン期限切れ =====
             if (response.status === 401) {
-
                 const alreadyRetried =
                     sessionStorage.getItem(
                         'admin_reauth_attempted'
                     ) === '1'
 
                 if (!alreadyRetried) {
-
                     sessionStorage.setItem(
                         'admin_reauth_attempted',
                         '1'
                     )
 
                     try {
-
                         if (liff.isLoggedIn()) {
                             liff.logout()
                         }
-
                     } catch (error) {
-
                         console.error(
                             'LIFFログアウトエラー',
                             error
@@ -225,30 +323,30 @@
                     }
 
                     restartLineLogin()
-
                     return new Promise(() => {})
                 }
-            }
 
+                throw new Error(
+                    result?.error
+                    || 'LINE認証の有効期限が切れています'
+                )
+            }
 
             // ===== 管理者ではない =====
             if (response.status === 403) {
-
                 throw new Error(
                     'このLINEアカウントには管理者権限がありません'
                 )
             }
-
 
             if (
                 !response.ok
                 || !result
                 || result.success !== true
             ) {
-
                 throw new Error(
                     result?.error
-                    || '管理者認証に失敗しました'
+                    || '管理データの取得に失敗しました'
                 )
             }
 
@@ -256,46 +354,204 @@
                 'admin_reauth_attempted'
             )
 
-            showStatus(
-                '管理者認証に成功しました。管理画面を利用できます。',
-                'success'
+            return result
+        }
+
+
+        // ===== 管理者認証APIを実行 =====
+        async function checkAdminAuth() {
+            await requestAdminApi(
+                '/api/admin/auth-check'
             )
+        }
+
+
+        // ===== 数値表示 =====
+        function formatCount(value) {
+            const numberValue = Number(value)
+
+            if (!Number.isFinite(numberValue)) {
+                return '0'
+            }
+
+            return numberValue.toLocaleString('ja-JP')
+        }
+
+
+        // ===== 最終更新日時表示 =====
+        function formatGeneratedAt(value) {
+            if (!value) {
+                return '-'
+            }
+
+            const date = new Date(value)
+
+            if (Number.isNaN(date.getTime())) {
+                return '-'
+            }
+
+            return date.toLocaleString(
+                'ja-JP',
+                {
+                    timeZone: 'Asia/Tokyo',
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                }
+            )
+        }
+
+
+        // ===== 集計データ表示 =====
+        function displayMetrics(metrics) {
+            document.getElementById(
+                'totalUsers'
+            ).textContent =
+                formatCount(metrics.total_users)
+
+            document.getElementById(
+                'todayRecords'
+            ).textContent =
+                formatCount(metrics.today_records)
+
+            document.getElementById(
+                'monthRecords'
+            ).textContent =
+                formatCount(metrics.month_records)
+
+            document.getElementById(
+                'pendingCount'
+            ).textContent =
+                formatCount(metrics.pending_count)
+
+            document.getElementById(
+                'updatedAt'
+            ).textContent =
+                '最終更新：'
+                + formatGeneratedAt(
+                    metrics.generated_at
+                )
+
+            document.getElementById(
+                'dashboardContent'
+            ).style.display = 'block'
+        }
+
+
+        // ===== 管理ダッシュボード取得 =====
+        async function loadDashboardMetrics() {
+            const result =
+                await requestAdminApi(
+                    '/api/admin/dashboard-metrics'
+                )
+
+            const metrics = result.metrics
+
+            if (
+                !metrics
+                || typeof metrics !== 'object'
+                || Array.isArray(metrics)
+            ) {
+                throw new Error(
+                    '管理データの形式が正しくありません'
+                )
+            }
+
+            displayMetrics(metrics)
+        }
+
+
+        // ===== 最新情報に更新 =====
+        async function refreshDashboard() {
+            const refreshButton =
+                document.getElementById(
+                    'refreshButton'
+                )
+
+            refreshButton.disabled = true
+
+            showStatus(
+                '最新情報を取得しています...',
+                'loading'
+            )
+
+            try {
+                await loadDashboardMetrics()
+
+                showStatus(
+                    '管理者認証済み・最新情報を表示しています。',
+                    'success'
+                )
+            } catch (error) {
+                console.error(
+                    '管理データ更新エラー',
+                    error
+                )
+
+                showStatus(
+                    error.message
+                    || '管理データの更新に失敗しました',
+                    'error'
+                )
+            } finally {
+                refreshButton.disabled = false
+            }
+        }
+
+
+        // ===== マイページへ戻る =====
+        function backToMyPage() {
+            window.location.href =
+                `${window.location.origin}/index.html`
         }
 
 
         // ===== 初期化 =====
         async function initAdminPage() {
-
             try {
-
                 await liff.init({
                     liffId: LIFF_ID
                 })
 
                 if (!liff.isLoggedIn()) {
-
                     showStatus(
                         'LINEログイン画面へ移動します...',
                         'loading'
                     )
 
                     restartLineLogin()
-
                     return
                 }
 
+                showStatus(
+                    '管理者認証を確認しています...',
+                    'loading'
+                )
+
                 await checkAdminAuth()
 
-            } catch (error) {
+                showStatus(
+                    '運営データを読み込んでいます...',
+                    'loading'
+                )
 
+                await loadDashboardMetrics()
+
+                showStatus(
+                    '管理者認証済み・最新情報を表示しています。',
+                    'success'
+                )
+            } catch (error) {
                 console.error(
-                    '管理画面認証エラー',
+                    '管理画面初期化エラー',
                     error
                 )
 
                 showStatus(
                     error.message
-                    || '管理者認証に失敗しました',
+                    || '管理画面の読み込みに失敗しました',
                     'error'
                 )
             }
@@ -303,8 +559,6 @@
 
 
         initAdminPage()
-
     </script>
-
 </body>
 </html>
