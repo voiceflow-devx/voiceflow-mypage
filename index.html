@@ -526,7 +526,44 @@
                     有料プランにアップグレード（月額980円）
                 </button>
             </div>
+
+        <!-- ===== 管理者専用メニュー ===== -->
+        <div
+            id="adminMenuCard"
+            class="card"
+            style="display:none;"
+        >
+            <h2>管理者メニュー</h2>
         
+            <p
+                style="
+                    color:#777;
+                    font-size:14px;
+                    line-height:1.6;
+                    margin-bottom:16px;
+                "
+            >
+                ユーザー情報やシステム状態を確認します。
+            </p>
+        
+            <button
+                onclick="openAdminDashboard()"
+                style="
+                    width:100%;
+                    padding:12px;
+                    background:#222;
+                    color:white;
+                    border:none;
+                    border-radius:10px;
+                    font-size:15px;
+                    font-weight:bold;
+                    cursor:pointer;
+                "
+            >
+                管理ダッシュボードを開く
+            </button>
+        </div>
+            
             <div class="card">
                 <h2>ログアウト</h2>
                 <button
@@ -613,6 +650,7 @@
     
     let currentUser = null
     let currentSettings = null
+    let isAdmin = false
     let lineIdToken = null
     let allRecords = []
     let editingRecordId = null
@@ -914,7 +952,11 @@
             currentSettings =
                 bootstrapData.settings
                 || {}
-    
+
+            isAdmin =
+                bootstrapData.is_admin
+                === true
+            
             allRecords =
                 bootstrapData.records
                 || []
@@ -969,7 +1011,11 @@
             currentSettings =
                 bootstrapData.settings
                 || {}
-    
+
+            isAdmin =
+                bootstrapData.is_admin
+                === true
+            
             allRecords =
                 bootstrapData.records
                 || []
@@ -1467,7 +1513,20 @@
             document.getElementById(
                 'upgradeBtn'
             )
-    
+
+        const adminMenuCard =
+            document.getElementById(
+                'adminMenuCard'
+            )
+        
+        if (adminMenuCard) {
+        
+            adminMenuCard.style.display =
+                isAdmin
+                ? 'block'
+                : 'none'
+        }
+        
         const plan =
             data.plan
             || 'free'
@@ -1496,6 +1555,23 @@
         }
     }
 
+    // ===== 管理ダッシュボードを開く =====
+    function openAdminDashboard() {
+    
+        if (!isAdmin) {
+    
+            showMessageModal(
+                '管理者権限がありません',
+                'このアカウントでは管理画面を利用できません。'
+            )
+    
+            return
+        }
+    
+        window.location.href =
+            `${window.location.origin}/admin.html`
+    }
+    
     // ===== ログアウト =====
     function logout() {
         localStorage.removeItem('line_user')
