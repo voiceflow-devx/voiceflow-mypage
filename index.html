@@ -503,8 +503,19 @@
 
         <!-- 設定 -->
         <div id="settingsPage" class="page">
-        
+            
             <div class="card">
+                <h2>利用状況</h2>
+            
+                <p
+                    id="planInfo"
+                    style="
+                        font-size:14px;
+                        line-height:1.8;
+                    "
+                ></p>
+            </div>
+            <!-- <div class="card">
                 <h2>プラン</h2>
                 <p id="planInfo" style="font-size:14px; margin-bottom:12px;"></p>
         
@@ -525,7 +536,7 @@
                     ">
                     有料プランにアップグレード（月額980円）
                 </button>
-            </div>
+            </div> -->
 
         <!-- ===== 管理者専用メニュー ===== -->
         <div
@@ -1509,10 +1520,10 @@
                 'planInfo'
             )
     
-        const upgradeBtn =
-            document.getElementById(
-                'upgradeBtn'
-            )
+        // const upgradeBtn =
+        //     document.getElementById(
+        //         'upgradeBtn'
+        //     )
 
         const adminMenuCard =
             document.getElementById(
@@ -1526,33 +1537,43 @@
                 ? 'block'
                 : 'none'
         }
-        
-        const plan =
-            data.plan
-            || 'free'
+
+            const monthlyCount =
+                Number(
+                    data.monthly_count
+                    || 0
+                )
+            
+            planInfo.innerHTML =
+                'テストプラン<br>'
+                + `今月の利用件数：${monthlyCount}件<br>`
+                + 'テスト期間中は利用上限なし'
+        // const plan =
+        //     data.plan
+        //     || 'free'
     
-        const monthlyCount =
-            Number(
-                data.monthly_count
-                || 0
-            )
+        // const monthlyCount =
+        //     Number(
+        //         data.monthly_count
+        //         || 0
+        //     )
     
-        if (plan === 'free') {
+        // if (plan === 'free') {
     
-            planInfo.textContent =
-                `無料プラン（今月${monthlyCount}/30件使用）`
+        //     planInfo.textContent =
+        //         `無料プラン（今月${monthlyCount}/30件使用）`
     
-            upgradeBtn.style.display =
-                'block'
+        //     upgradeBtn.style.display =
+        //         'block'
     
-        } else {
+        // } else {
     
-            planInfo.textContent =
-                '有料プラン（無制限）'
+        //     planInfo.textContent =
+        //         '有料プラン（無制限）'
     
-            upgradeBtn.style.display =
-                'none'
-        }
+        //     upgradeBtn.style.display =
+        //         'none'
+        // }
     }
 
     // ===== 管理ダッシュボードを開く =====
