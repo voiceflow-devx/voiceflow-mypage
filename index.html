@@ -613,7 +613,13 @@
         <input id="editAmount" class="modal-input" placeholder="金額">
         <input id="editAccount" class="modal-input" placeholder="勘定科目">
         <input id="editPayment" class="modal-input" placeholder="支払方法">
-
+        <textarea
+            id="editMemo"
+            class="modal-input"
+            placeholder="メモ・備考"
+            rows="4"
+        ></textarea>
+        
         <div class="modal-buttons">
             <button class="btn-cancel" onclick="closeEditModal()">キャンセル</button>
             <button class="btn-save" onclick="saveEditRecord()">保存する</button>
@@ -1257,15 +1263,22 @@
                     .includes(keyword)
         
                 ||
-        
+
                 (r.account || '')
                     .toLowerCase()
                     .includes(keyword)
-        
+                
                 ||
-        
+                
+                (r.memo || '')
+                    .toLowerCase()
+                    .includes(keyword)
+                
+                ||
+                
                 String(r.amount || '')
                     .includes(keyword)
+
             )
         }
         
@@ -1349,6 +1362,7 @@
                 <div class="record-info">
                     <div class="store">${r.store || '-'}</div>
                     <div class="detail">${r.date || ''} | ${r.item || ''} | ${r.payment || ''}</div>
+                    ${r.memo ? `<div class="detail">メモ：${r.memo}</div>` : ''}
                     <span class="badge">${r.account || ''}</span>
         
                     <div style="display:flex; gap:8px; margin-top:10px;">
@@ -1721,6 +1735,7 @@
         document.getElementById('editAmount').value = record.amount || ''
         document.getElementById('editAccount').value = record.account || ''
         document.getElementById('editPayment').value = record.payment || ''
+        document.getElementById('editMemo').value = record.memo || ''
     
         document.getElementById('editModal').style.display = 'block'
     }
@@ -1784,6 +1799,10 @@
             payment:
                 document.getElementById(
                     'editPayment'
+                ).value,
+            memo:
+                document.getElementById(
+                    'editMemo'
                 ).value
         }
     
