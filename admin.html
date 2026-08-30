@@ -21,7 +21,7 @@
 
         .container {
             width: 100%;
-            max-width: 760px;
+            max-width: 1200px;
             margin: 40px auto;
         }
 
@@ -141,6 +141,77 @@
             opacity: 0.55;
         }
 
+        .admin-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            overflow-x: auto;
+        }
+        
+        .admin-tab {
+            padding: 10px 16px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            background: white;
+            color: #555;
+            cursor: pointer;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+        
+        .admin-tab.active {
+            background: #222;
+            color: white;
+            border-color: #222;
+        }
+        
+        .admin-panel {
+            display: none;
+        }
+        
+        .admin-panel.active {
+            display: block;
+        }
+        
+        .admin-table-wrap {
+            width: 100%;
+            overflow-x: auto;
+            margin-top: 16px;
+        }
+        
+        .admin-table {
+            width: 100%;
+            min-width: 1000px;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        
+        .admin-table th,
+        .admin-table td {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            text-align: left;
+            vertical-align: top;
+        }
+        
+        .admin-table th {
+            background: #f5f5f5;
+            white-space: nowrap;
+        }
+        
+        .admin-table td {
+            max-width: 240px;
+            word-break: break-word;
+        }
+        
+        .admin-search {
+            width: 100%;
+            padding: 11px 12px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            font-size: 15px;
+        }
+        
         @media (min-width: 720px) {
             .metrics-grid {
                 grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -171,6 +242,28 @@
             </div>
 
             <div id="dashboardContent" class="dashboard-content">
+
+                <div class="admin-tabs">
+                    <button
+                        id="overviewTab"
+                        class="admin-tab active"
+                        onclick="showAdminPanel('overview')">
+                        概要
+                    </button>
+            
+                    <button
+                        id="currentExpensesTab"
+                        class="admin-tab"
+                        onclick="showAdminPanel('currentExpenses')">
+                        現在の経費
+                    </button>
+                </div>
+            
+                <div
+                    id="overviewPanel"
+                    class="admin-panel active"
+                >
+            
                 <div class="metrics-grid">
                     <div class="metric-card">
                         <div class="metric-label">ユーザー総数</div>
@@ -247,6 +340,56 @@
 
                 <div id="updatedAt" class="updated-at">
                     最終更新：-
+                </div>
+
+                </div>
+
+                <div
+                    id="currentExpensesPanel"
+                    class="admin-panel"
+                >
+                    <h2>現在登録されている経費</h2>
+                
+                    <input
+                        id="currentExpensesSearch"
+                        class="admin-search"
+                        type="text"
+                        placeholder="支払先・内容・科目・メモ・ユーザーIDで検索"
+                        oninput="renderCurrentExpenses()"
+                    >
+                
+                    <div
+                        id="currentExpensesCount"
+                        class="updated-at"
+                        style="text-align:left;"
+                    >
+                        -
+                    </div>
+                
+                    <div class="admin-table-wrap">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>日付</th>
+                                    <th>支払先</th>
+                                    <th>内容</th>
+                                    <th>金額</th>
+                                    <th>勘定科目</th>
+                                    <th>支払方法</th>
+                                    <th>メモ</th>
+                                    <th>ユーザーID</th>
+                                </tr>
+                            </thead>
+                
+                            <tbody id="currentExpensesBody">
+                                <tr>
+                                    <td colspan="8">
+                                        読み込み前です
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
                 <div class="button-row">
