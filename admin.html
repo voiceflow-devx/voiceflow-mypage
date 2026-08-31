@@ -264,6 +264,13 @@
                         onclick="showAdminPanel('deletedExpenses')">
                         削除済み経費
                     </button>
+                    <button
+                        id="recordLogsTab"
+                        class="admin-tab"
+                        onclick="showAdminPanel('recordLogs')">
+                        操作履歴
+                    </button>
+                    
                 </div>
             
                 <div
@@ -448,6 +455,52 @@
                         </table>
                     </div>
                 </div>
+
+                <div
+                    id="recordLogsPanel"
+                    class="admin-panel"
+                >
+                    <h2>操作履歴</h2>
+                
+                    <input
+                        id="recordLogsSearch"
+                        class="admin-search"
+                        type="text"
+                        placeholder="操作・対象ID・内容・ユーザーIDで検索"
+                        oninput="renderRecordLogs()"
+                    >
+                
+                    <div
+                        id="recordLogsCount"
+                        class="updated-at"
+                        style="text-align:left;"
+                    >
+                        -
+                    </div>
+                
+                    <div class="admin-table-wrap">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>日時</th>
+                                    <th>操作</th>
+                                    <th>対象ID</th>
+                                    <th>変更内容</th>
+                                    <th>操作元</th>
+                                    <th>ユーザーID</th>
+                                </tr>
+                            </thead>
+                
+                            <tbody id="recordLogsBody">
+                                <tr>
+                                    <td colspan="6">
+                                        読み込み前です
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
                 
                 <div class="button-row">
                     <button
@@ -478,6 +531,7 @@
 
         let currentExpenses = []
         let deletedExpenses = []
+        let recordLogs = []
 
         // ===== メッセージ表示 =====
         function showStatus(message, type = 'loading') {
@@ -803,6 +857,18 @@
             
                 await loadDeletedExpenses()
             }
+            if (panelName === 'recordLogs') {
+
+                document
+                    .getElementById('recordLogsPanel')
+                    .classList.add('active')
+            
+                document
+                    .getElementById('recordLogsTab')
+                    .classList.add('active')
+            
+                await loadRecordLogs()
+            }
         }
         
         
@@ -1109,7 +1175,344 @@
         
                 `).join('')
         }
-                
+
+        // ===== 操作履歴取得 =====
+        async function loadRecordLogs() {
+        
+            showStatus(
+                '操作履歴を取得しています...',
+                'loading'
+            )
+        
+            try {
+        
+                const result =
+                    await requestAdminApi(
+                        '/api/admin/record-logs'
+                    )
+        
+                recordLogs =
+                    Array.isArray(result.logs)
+                        ? result.logs
+                        : []
+        
+                renderRecordLogs()
+        
+                showStatus(
+                    '管理者認証済み・操作履歴を表示しています。',
+                    'success'
+                )
+        
+            } catch (error) {
+        
+                console.error(
+                    '操作履歴取得エラー',
+                    error
+                )
+        
+                showStatus(
+                    error.message
+                    || '操作履歴を取得できませんでした',
+                    'error'
+                )
+            }
+        }
+        
+        
+        // ===== 操作名を日本語化 =====
+        function formatActionName(action) {
+        
+            if (action === 'update') {
+                return '修正'
+            }
+        
+            if (action === 'delete') {
+                return '削除'
+            }
+        
+            return action || '-'
+        }
+        
+        
+        // ===== 操作元を日本語化 =====
+        function formatSourceName(source) {
+        
+            if (source === 'WEB') {
+                return 'マイページ'
+            }
+        
+            if (source === 'LINE') {
+                return 'LINE'
+            }
+        
+            return source || '-'
+        }
+        
+        
+        // ===== 日時表示 =====
+        function formatAdminDateTime(value) {
+        
+            if (!value) {
+                return '-'
+            }
+        
+            const date = new Date(value)
+        
+            if (Number.isNaN(date.getTime())) {
+                return '-'
+            }
+        
+            return date.toLocaleString(
+                'ja-JP',
+                {
+                    timeZone: 'Asia/Tokyo',
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                }
+            )
+        }
+        
+        
+        // ===== 履歴の値表示 =====
+        function formatLogValue(key, value) {
+        
+            if (
+                value === null
+                || value === undefined
+                || value === ''
+            ) {
+                return '-'
+            }
+        
+            if (key === 'amount') {
+        
+                const amount = Number(value)
+        
+                if (Number.isFinite(amount)) {
+                    return `${amount.toLocaleString('ja-JP')}円`
+                }
+            }
+        
+            return String(value)
+        }
+        
+        
+        // ===== 変更内容を読みやすく作成 =====
+        function formatLogChanges(log) {
+        
+            const before =
+                log.before_data
+                && typeof log.before_data === 'object'
+                    ? log.before_data
+                    : {}
+        
+            const after =
+                log.after_data
+                && typeof log.after_data === 'object'
+                    ? log.after_data
+                    : {}
+        
+            const fields = [
+                ['date', '日付'],
+                ['store', '支払先'],
+                ['item', '内容'],
+                ['amount', '金額'],
+                ['account', '勘定科目'],
+                ['payment', '支払方法'],
+                ['memo', 'メモ']
+            ]
+        
+            // ===== 削除 =====
+            if (log.action === 'delete') {
+        
+                const values =
+                    fields
+                        .map(([key, label]) => {
+        
+                            const value =
+                                formatLogValue(
+                                    key,
+                                    before[key]
+                                )
+        
+                            return `
+                                <div>
+                                    <strong>
+                                        ${escapeHtml(label)}
+                                    </strong>
+                                    ：
+                                    ${escapeHtml(value)}
+                                </div>
+                            `
+                        })
+                        .join('')
+        
+                return `
+                    <div>
+                        <strong>削除されたデータ</strong>
+                    </div>
+                    ${values}
+                `
+            }
+        
+            // ===== 修正 =====
+            const changes = []
+        
+            fields.forEach(([key, label]) => {
+        
+                const beforeValue =
+                    formatLogValue(
+                        key,
+                        before[key]
+                    )
+        
+                const afterValue =
+                    formatLogValue(
+                        key,
+                        after[key]
+                    )
+        
+                if (beforeValue === afterValue) {
+                    return
+                }
+        
+                changes.push(`
+                    <div style="margin-bottom:6px;">
+                        <strong>
+                            ${escapeHtml(label)}
+                        </strong>
+                        ：
+                        ${escapeHtml(beforeValue)}
+                        →
+                        ${escapeHtml(afterValue)}
+                    </div>
+                `)
+            })
+        
+            if (changes.length === 0) {
+                return '変更内容なし'
+            }
+        
+            return changes.join('')
+        }
+        
+        
+        // ===== 操作履歴表示 =====
+        function renderRecordLogs() {
+        
+            const keyword =
+                (
+                    document.getElementById(
+                        'recordLogsSearch'
+                    )?.value
+                    || ''
+                )
+                .trim()
+                .toLowerCase()
+        
+            let logs = recordLogs
+        
+            if (keyword) {
+        
+                logs =
+                    logs.filter(log => {
+        
+                        const target = [
+                            log.user_id,
+                            log.record_id,
+                            log.action,
+                            log.source,
+                            log.memo,
+                            JSON.stringify(
+                                log.before_data || {}
+                            ),
+                            JSON.stringify(
+                                log.after_data || {}
+                            )
+                        ]
+                        .map(value =>
+                            String(value ?? '')
+                                .toLowerCase()
+                        )
+                        .join(' ')
+        
+                        return target.includes(keyword)
+                    })
+            }
+        
+            document.getElementById(
+                'recordLogsCount'
+            ).textContent =
+                `表示件数：${logs.length.toLocaleString('ja-JP')}件`
+        
+            const body =
+                document.getElementById(
+                    'recordLogsBody'
+                )
+        
+            if (logs.length === 0) {
+        
+                body.innerHTML = `
+                    <tr>
+                        <td colspan="6">
+                            操作履歴はありません
+                        </td>
+                    </tr>
+                `
+        
+                return
+            }
+        
+            body.innerHTML =
+                logs.map(log => `
+        
+                    <tr>
+                        <td>
+                            ${escapeHtml(
+                                formatAdminDateTime(
+                                    log.created_at
+                                )
+                            )}
+                        </td>
+        
+                        <td>
+                            ${escapeHtml(
+                                formatActionName(
+                                    log.action
+                                )
+                            )}
+                        </td>
+        
+                        <td>
+                            ${escapeHtml(
+                                log.record_id ?? '-'
+                            )}
+                        </td>
+        
+                        <td>
+                            ${formatLogChanges(log)}
+                        </td>
+        
+                        <td>
+                            ${escapeHtml(
+                                formatSourceName(
+                                    log.source
+                                )
+                            )}
+                        </td>
+        
+                        <td>
+                            ${escapeHtml(
+                                log.user_id || '-'
+                            )}
+                        </td>
+                    </tr>
+        
+                `).join('')
+        }
         // ===== 最新情報に更新 =====
         async function refreshDashboard() {
             const refreshButton =
