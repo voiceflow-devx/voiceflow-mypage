@@ -362,6 +362,7 @@
     <div class="nav">
         <button class="active" onclick="showPage('home', this)">ホーム</button>
         <button onclick="showPage('records', this)">一覧</button>
+        <button onclick="showPage('income', this)">売上・入金</button>
         <button onclick="showPage('chart', this)">グラフ</button>
         <button onclick="showPage('export', this)">出力</button>
         <button onclick="showPage('settings', this)">設定</button>
@@ -470,6 +471,55 @@
                 </div>
                 
                 </div>
+
+        <!-- 売上・入金 -->
+        <div id="incomePage" class="page">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="label">売上合計</div>
+                    <div class="value" id="incomeTotal">-</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">未入金合計</div>
+                    <div class="value" id="incomeUnpaidTotal">-</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>売上・入金一覧</h2>
+
+                <div class="filter-row">
+                    <select
+                        id="incomeStatusFilter"
+                        onchange="loadIncomeRecords()"
+                    >
+                        <option value="">すべての入金状況</option>
+                        <option value="unpaid">未入金</option>
+                        <option value="paid">入金済み</option>
+                    </select>
+
+                    <input
+                        id="incomeKeywordFilter"
+                        type="text"
+                        placeholder="取引先・内容・メモで検索"
+                        oninput="loadIncomeRecords()"
+                        style="
+                            flex:1;
+                            min-width:180px;
+                            padding:8px 12px;
+                            border:1px solid #ddd;
+                            border-radius:8px;
+                            font-size:13px;
+                            background:white;
+                        "
+                    >
+                </div>
+
+                <div id="incomeRecordsList">
+                    <div class="loading">読み込み中...</div>
+                </div>
+            </div>
+        </div>
 
         <!-- グラフ -->
         <div id="chartPage" class="page">
@@ -670,6 +720,7 @@
     let isAdmin = false
     let lineIdToken = null
     let allRecords = []
+    let allIncomeRecords = []
     let editingRecordId = null
     let deletingRecordId = null
     let currentMonth = new Date()
@@ -977,6 +1028,10 @@
             allRecords =
                 bootstrapData.records
                 || []
+
+            allIncomeRecords =
+                bootstrapData.income_records
+                || []
     
             setupFilters()
     
@@ -1035,6 +1090,10 @@
             
             allRecords =
                 bootstrapData.records
+                || []
+
+            allIncomeRecords =
+                bootstrapData.income_records
                 || []
     
             setupFilters()
@@ -1420,6 +1479,158 @@
         loadRecords()
     
     }
+    // ===== HTML表示用エスケープ =====
+    function escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;')
+    }
+
+    // ===== 売上・入金一覧読み込み =====
+    function loadIncomeRecords() {
+
+        const total = allIncomeRecords.reduce(
+            (sum, record) =>
+                sum + Number(record.amount || 0),
+            0
+        )
+
+        const unpaidTotal = allIncomeRecords
+            .filter(record =>
+                record.receipt_status === 'unpaid'
+            )
+            .reduce(
+                (sum, record) =>
+                    sum + Number(record.amount || 0),
+                0
+            )
+
+        document.getElementById(
+            'incomeTotal'
+        ).textContent =
+            `${total.toLocaleString('ja-JP')}円`
+
+        document.getElementById(
+            'incomeUnpaidTotal'
+        ).textContent =
+            `${unpaidTotal.toLocaleString('ja-JP')}円`
+
+        const statusFilter =
+            document.getElementById(
+                'incomeStatusFilter'
+            )?.value || ''
+
+        const keyword =
+            (
+                document.getElementById(
+                    'incomeKeywordFilter'
+                )?.value || ''
+            )
+            .trim()
+            .toLowerCase()
+
+        let filtered = [...allIncomeRecords]
+
+        if (statusFilter) {
+            filtered = filtered.filter(record =>
+                record.receipt_status === statusFilter
+            )
+        }
+
+        if (keyword) {
+            filtered = filtered.filter(record => {
+                const target = [
+                    record.client,
+                    record.description,
+                    record.memo,
+                    record.date,
+                    record.amount
+                ]
+                .map(value =>
+                    String(value ?? '').toLowerCase()
+                )
+                .join(' ')
+
+                return target.includes(keyword)
+            })
+        }
+
+        const list =
+            document.getElementById(
+                'incomeRecordsList'
+            )
+
+        if (!list) {
+            return
+        }
+
+        if (filtered.length === 0) {
+            list.innerHTML = `
+                <p style="
+                    color:#999;
+                    text-align:center;
+                    padding:20px;
+                ">
+                    売上データがありません
+                </p>
+            `
+            return
+        }
+
+        list.innerHTML = filtered.map(record => {
+
+            const isPaid =
+                record.receipt_status === 'paid'
+
+            const statusText =
+                isPaid ? '入金済み' : '未入金'
+
+            const statusStyle = isPaid
+                ? 'background:#e8f5e9;color:#06C755;'
+                : 'background:#fff3e0;color:#e67e00;'
+
+            const paymentInfo = isPaid
+                ? `入金日：${escapeHtml(record.paid_date || '-')} / 入金方法：${escapeHtml(record.deposit_method || '-')}`
+                : `入金予定：${escapeHtml(record.expected_payment_date || '-')}`
+
+            const memoHtml = record.memo
+                ? `<div class="detail">メモ：${escapeHtml(record.memo)}</div>`
+                : ''
+
+            return `
+                <div class="record-item">
+                    <div class="record-info" style="min-width:0; padding-right:12px;">
+                        <div class="store">
+                            ${escapeHtml(record.client || '-')}
+                        </div>
+                        <div class="detail">
+                            ${escapeHtml(record.date || '')}
+                            |
+                            ${escapeHtml(record.description || '-')}
+                        </div>
+                        <div class="detail">
+                            ${paymentInfo}
+                        </div>
+                        ${memoHtml}
+                        <span
+                            class="badge"
+                            style="${statusStyle}"
+                        >
+                            ${statusText}
+                        </span>
+                    </div>
+
+                    <div class="record-amount" style="white-space:nowrap;">
+                        ${Number(record.amount || 0).toLocaleString('ja-JP')}円
+                    </div>
+                </div>
+            `
+        }).join('')
+    }
+
     // ===== グラフ読み込み =====
     async function loadCharts() {
         // 月別推移
@@ -1624,6 +1835,7 @@
         btn.classList.add('active')
 
         if (page === 'records') loadRecords()
+        if (page === 'income') loadIncomeRecords()
         if (page === 'chart') loadCharts()
     }
 
