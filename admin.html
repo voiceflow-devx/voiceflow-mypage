@@ -419,6 +419,7 @@
         const LIFF_ID =
             '2010043850-PaxG9LLM'
 
+        let currentExpenses = []
 
         // ===== メッセージ表示 =====
         function showStatus(message, type = 'loading') {
@@ -681,6 +682,207 @@
         }
 
 
+        // ===== HTML安全表示 =====
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#039;')
+        }
+        
+        
+        // ===== 管理画面タブ切替 =====
+        async function showAdminPanel(panelName) {
+        
+            document
+                .querySelectorAll('.admin-panel')
+                .forEach(panel => {
+                    panel.classList.remove('active')
+                })
+        
+            document
+                .querySelectorAll('.admin-tab')
+                .forEach(tab => {
+                    tab.classList.remove('active')
+                })
+        
+            if (panelName === 'overview') {
+        
+                document
+                    .getElementById('overviewPanel')
+                    .classList.add('active')
+        
+                document
+                    .getElementById('overviewTab')
+                    .classList.add('active')
+        
+                return
+            }
+        
+            if (panelName === 'currentExpenses') {
+        
+                document
+                    .getElementById('currentExpensesPanel')
+                    .classList.add('active')
+        
+                document
+                    .getElementById('currentExpensesTab')
+                    .classList.add('active')
+        
+                await loadCurrentExpenses()
+            }
+        }
+        
+        
+        // ===== 現在経費取得 =====
+        async function loadCurrentExpenses() {
+        
+            showStatus(
+                '現在の経費を取得しています...',
+                'loading'
+            )
+        
+            try {
+        
+                const result =
+                    await requestAdminApi(
+                        '/api/admin/current-expenses'
+                    )
+        
+                currentExpenses =
+                    Array.isArray(result.records)
+                        ? result.records
+                        : []
+        
+                renderCurrentExpenses()
+        
+                showStatus(
+                    '管理者認証済み・現在の経費を表示しています。',
+                    'success'
+                )
+        
+            } catch (error) {
+        
+                console.error(
+                    '現在経費取得エラー',
+                    error
+                )
+        
+                showStatus(
+                    error.message
+                    || '現在の経費を取得できませんでした',
+                    'error'
+                )
+            }
+        }
+        
+        
+        // ===== 現在経費表示 =====
+        function renderCurrentExpenses() {
+        
+            const keyword =
+                (
+                    document.getElementById(
+                        'currentExpensesSearch'
+                    )?.value
+                    || ''
+                )
+                .trim()
+                .toLowerCase()
+        
+            let records = currentExpenses
+        
+            if (keyword) {
+        
+                records =
+                    records.filter(record => {
+        
+                        const target = [
+                            record.user_id,
+                            record.date,
+                            record.store,
+                            record.item,
+                            record.amount,
+                            record.account,
+                            record.payment,
+                            record.memo
+                        ]
+                        .map(value =>
+                            String(value ?? '')
+                                .toLowerCase()
+                        )
+                        .join(' ')
+        
+                        return target.includes(keyword)
+                    })
+            }
+        
+            document.getElementById(
+                'currentExpensesCount'
+            ).textContent =
+                `表示件数：${records.length.toLocaleString('ja-JP')}件`
+        
+            const body =
+                document.getElementById(
+                    'currentExpensesBody'
+                )
+        
+            if (records.length === 0) {
+        
+                body.innerHTML = `
+                    <tr>
+                        <td colspan="8">
+                            該当する経費はありません
+                        </td>
+                    </tr>
+                `
+        
+                return
+            }
+        
+            body.innerHTML =
+                records.map(record => `
+        
+                    <tr>
+                        <td>
+                            ${escapeHtml(record.date || '-')}
+                        </td>
+        
+                        <td>
+                            ${escapeHtml(record.store || '-')}
+                        </td>
+        
+                        <td>
+                            ${escapeHtml(record.item || '-')}
+                        </td>
+        
+                        <td>
+                            ${Number(record.amount || 0)
+                                .toLocaleString('ja-JP')}円
+                        </td>
+        
+                        <td>
+                            ${escapeHtml(record.account || '-')}
+                        </td>
+        
+                        <td>
+                            ${escapeHtml(record.payment || '-')}
+                        </td>
+        
+                        <td>
+                            ${escapeHtml(record.memo || '-')}
+                        </td>
+        
+                        <td>
+                            ${escapeHtml(record.user_id || '-')}
+                        </td>
+                    </tr>
+        
+                `).join('')
+        }
+                
         // ===== 最新情報に更新 =====
         async function refreshDashboard() {
             const refreshButton =
