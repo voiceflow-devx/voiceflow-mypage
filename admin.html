@@ -257,6 +257,13 @@
                         onclick="showAdminPanel('currentExpenses')">
                         現在の経費
                     </button>
+                    
+                    <button
+                        id="deletedExpensesTab"
+                        class="admin-tab"
+                        onclick="showAdminPanel('deletedExpenses')">
+                        削除済み経費
+                    </button>
                 </div>
             
                 <div
@@ -392,6 +399,56 @@
                     </div>
                 </div>
 
+                <div
+                    id="deletedExpensesPanel"
+                    class="admin-panel"
+                >
+                    <h2>削除済み経費</h2>
+                
+                    <input
+                        id="deletedExpensesSearch"
+                        class="admin-search"
+                        type="text"
+                        placeholder="支払先・内容・科目・メモ・ユーザーIDで検索"
+                        oninput="renderDeletedExpenses()"
+                    >
+                
+                    <div
+                        id="deletedExpensesCount"
+                        class="updated-at"
+                        style="text-align:left;"
+                    >
+                        -
+                    </div>
+                
+                    <div class="admin-table-wrap">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>元ID</th>
+                                    <th>日付</th>
+                                    <th>支払先</th>
+                                    <th>内容</th>
+                                    <th>金額</th>
+                                    <th>勘定科目</th>
+                                    <th>支払方法</th>
+                                    <th>メモ</th>
+                                    <th>削除元</th>
+                                    <th>ユーザーID</th>
+                                </tr>
+                            </thead>
+                
+                            <tbody id="deletedExpensesBody">
+                                <tr>
+                                    <td colspan="10">
+                                        読み込み前です
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
                 <div class="button-row">
                     <button
                         id="refreshButton"
@@ -420,6 +477,7 @@
             '2010043850-PaxG9LLM'
 
         let currentExpenses = []
+        let deletedExpenses = []
 
         // ===== メッセージ表示 =====
         function showStatus(message, type = 'loading') {
@@ -733,6 +791,18 @@
         
                 await loadCurrentExpenses()
             }
+            if (panelName === 'deletedExpenses') {
+
+                document
+                    .getElementById('deletedExpensesPanel')
+                    .classList.add('active')
+            
+                document
+                    .getElementById('deletedExpensesTab')
+                    .classList.add('active')
+            
+                await loadDeletedExpenses()
+            }
         }
         
         
@@ -873,6 +943,163 @@
         
                         <td>
                             ${escapeHtml(record.memo || '-')}
+                        </td>
+        
+                        <td>
+                            ${escapeHtml(record.user_id || '-')}
+                        </td>
+                    </tr>
+        
+                `).join('')
+        }
+
+        // ===== 削除済み経費取得 =====
+        async function loadDeletedExpenses() {
+        
+            showStatus(
+                '削除済み経費を取得しています...',
+                'loading'
+            )
+        
+            try {
+        
+                const result =
+                    await requestAdminApi(
+                        '/api/admin/deleted-expenses'
+                    )
+        
+                deletedExpenses =
+                    Array.isArray(result.records)
+                        ? result.records
+                        : []
+        
+                renderDeletedExpenses()
+        
+                showStatus(
+                    '管理者認証済み・削除済み経費を表示しています。',
+                    'success'
+                )
+        
+            } catch (error) {
+        
+                console.error(
+                    '削除済み経費取得エラー',
+                    error
+                )
+        
+                showStatus(
+                    error.message
+                    || '削除済み経費を取得できませんでした',
+                    'error'
+                )
+            }
+        }
+        
+        
+        // ===== 削除済み経費表示 =====
+        function renderDeletedExpenses() {
+        
+            const keyword =
+                (
+                    document.getElementById(
+                        'deletedExpensesSearch'
+                    )?.value
+                    || ''
+                )
+                .trim()
+                .toLowerCase()
+        
+            let records = deletedExpenses
+        
+            if (keyword) {
+        
+                records =
+                    records.filter(record => {
+        
+                        const target = [
+                            record.original_record_id,
+                            record.user_id,
+                            record.date,
+                            record.store,
+                            record.item,
+                            record.amount,
+                            record.account,
+                            record.payment,
+                            record.memo,
+                            record.deleted_from
+                        ]
+                        .map(value =>
+                            String(value ?? '')
+                                .toLowerCase()
+                        )
+                        .join(' ')
+        
+                        return target.includes(keyword)
+                    })
+            }
+        
+            document.getElementById(
+                'deletedExpensesCount'
+            ).textContent =
+                `表示件数：${records.length.toLocaleString('ja-JP')}件`
+        
+            const body =
+                document.getElementById(
+                    'deletedExpensesBody'
+                )
+        
+            if (records.length === 0) {
+        
+                body.innerHTML = `
+                    <tr>
+                        <td colspan="10">
+                            削除済み経費はありません
+                        </td>
+                    </tr>
+                `
+        
+                return
+            }
+        
+            body.innerHTML =
+                records.map(record => `
+        
+                    <tr>
+                        <td>
+                            ${escapeHtml(record.original_record_id || '-')}
+                        </td>
+        
+                        <td>
+                            ${escapeHtml(record.date || '-')}
+                        </td>
+        
+                        <td>
+                            ${escapeHtml(record.store || '-')}
+                        </td>
+        
+                        <td>
+                            ${escapeHtml(record.item || '-')}
+                        </td>
+        
+                        <td>
+                            ${Number(record.amount || 0)
+                                .toLocaleString('ja-JP')}円
+                        </td>
+        
+                        <td>
+                            ${escapeHtml(record.account || '-')}
+                        </td>
+        
+                        <td>
+                            ${escapeHtml(record.payment || '-')}
+                        </td>
+        
+                        <td>
+                            ${escapeHtml(record.memo || '-')}
+                        </td>
+        
+                        <td>
+                            ${escapeHtml(record.deleted_from || '-')}
                         </td>
         
                         <td>
