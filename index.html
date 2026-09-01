@@ -695,6 +695,59 @@
     </div>
 </div>
 
+<!-- 売上：入金済み変更モーダル -->
+<div id="incomePaymentModal" class="modal-bg">
+    <div class="modal-box">
+        <div class="modal-title">入金済みに変更</div>
+        <div class="modal-note">
+            入金日と入金方法を確認して「入金済みにする」を押してください。
+        </div>
+
+        <div
+            id="incomePaymentRecordText"
+            style="font-size:14px; line-height:1.8; margin-bottom:16px;"
+        ></div>
+
+        <label style="display:block; font-size:13px; color:#666; margin-bottom:6px;">
+            入金日
+        </label>
+        <input
+            id="incomePaidDate"
+            class="modal-input"
+            type="date"
+        >
+
+        <label style="display:block; font-size:13px; color:#666; margin-bottom:6px;">
+            入金方法
+        </label>
+        <select
+            id="incomeDepositMethod"
+            class="modal-input"
+        >
+            <option value="銀行振込">銀行振込</option>
+            <option value="現金">現金</option>
+            <option value="その他">その他</option>
+        </select>
+
+        <div class="modal-buttons">
+            <button
+                class="btn-cancel"
+                onclick="closeIncomePaymentModal()"
+            >
+                キャンセル
+            </button>
+
+            <button
+                id="incomePaymentSaveButton"
+                class="btn-save"
+                onclick="saveIncomePayment()"
+            >
+                入金済みにする
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- 完了メッセージモーダル -->
 <div id="messageModal" class="modal-bg">
     <div class="modal-box">
@@ -721,6 +774,7 @@
     let lineIdToken = null
     let allRecords = []
     let allIncomeRecords = []
+    let payingIncomeRecordId = null
     let editingRecordId = null
     let deletingRecordId = null
     let currentMonth = new Date()
@@ -1621,6 +1675,26 @@
                         >
                             ${statusText}
                         </span>
+
+                        ${!isPaid ? `
+                            <div style="margin-top:10px;">
+                                <button
+                                    onclick="openIncomePaymentModal('${String(record.id)}')"
+                                    style="
+                                        padding:8px 12px;
+                                        border:none;
+                                        border-radius:8px;
+                                        background:#06C755;
+                                        color:white;
+                                        font-size:12px;
+                                        font-weight:bold;
+                                        cursor:pointer;
+                                    "
+                                >
+                                    入金済みにする
+                                </button>
+                            </div>
+                        ` : ''}
                     </div>
 
                     <div class="record-amount" style="white-space:nowrap;">
@@ -1630,6 +1704,170 @@
             `
         }).join('')
     }
+
+    // ===== 売上：入金済みモーダルを開く =====
+    function openIncomePaymentModal(recordId) {
+
+        const record = allIncomeRecords.find(
+            item =>
+                String(item.id)
+                === String(recordId)
+        )
+
+        if (!record) {
+            showMessageModal(
+                '対象データが見つかりません',
+                'ページを再読み込みしてからもう一度お試しください。'
+            )
+            return
+        }
+
+        if (record.receipt_status === 'paid') {
+            showMessageModal(
+                'すでに入金済みです',
+                'この売上はすでに入金済みになっています。'
+            )
+            return
+        }
+
+        payingIncomeRecordId = String(recordId)
+
+        const now = new Date()
+        const year = now.getFullYear()
+        const month = String(now.getMonth() + 1).padStart(2, '0')
+        const day = String(now.getDate()).padStart(2, '0')
+
+        document.getElementById(
+            'incomePaidDate'
+        ).value = `${year}-${month}-${day}`
+
+        document.getElementById(
+            'incomeDepositMethod'
+        ).value = '銀行振込'
+
+        document.getElementById(
+            'incomePaymentRecordText'
+        ).innerHTML = `
+            売上日：${escapeHtml(record.date || '-')}<br>
+            取引先：${escapeHtml(record.client || '-')}<br>
+            内容：${escapeHtml(record.description || '-')}<br>
+            金額：${Number(record.amount || 0).toLocaleString('ja-JP')}円
+        `
+
+        document.getElementById(
+            'incomePaymentModal'
+        ).style.display = 'block'
+    }
+
+
+    // ===== 売上：入金済みモーダルを閉じる =====
+    function closeIncomePaymentModal() {
+
+        payingIncomeRecordId = null
+
+        document.getElementById(
+            'incomePaymentModal'
+        ).style.display = 'none'
+    }
+
+
+    // ===== 売上：入金済みとして保存 =====
+    async function saveIncomePayment() {
+
+        const recordId = payingIncomeRecordId
+
+        if (!recordId) {
+            return
+        }
+
+        const paidDate =
+            document.getElementById(
+                'incomePaidDate'
+            ).value
+
+        const depositMethod =
+            document.getElementById(
+                'incomeDepositMethod'
+            ).value
+
+        if (!paidDate) {
+            showMessageModal(
+                '入金日を入力してください',
+                '入金日を選択してください。'
+            )
+            return
+        }
+
+        if (!depositMethod) {
+            showMessageModal(
+                '入金方法を選択してください',
+                '入金方法を選択してください。'
+            )
+            return
+        }
+
+        const saveButton =
+            document.getElementById(
+                'incomePaymentSaveButton'
+            )
+
+        saveButton.disabled = true
+        saveButton.textContent = '更新中...'
+
+        try {
+
+            await requestMypageApi(
+                (
+                    '/api/mypage/income-records/'
+                    + encodeURIComponent(recordId)
+                    + '/mark-paid'
+                ),
+                'PATCH',
+                {
+                    paid_date: paidDate,
+                    deposit_method: depositMethod
+                }
+            )
+
+            closeIncomePaymentModal()
+
+            const refreshed =
+                await loadAllData()
+
+            if (!refreshed) {
+                return
+            }
+
+            loadIncomeRecords()
+            await loadSettings()
+
+            showMessageModal(
+                '入金済みに変更しました',
+                '売上の入金状況を「入金済み」に更新しました。'
+            )
+
+        } catch (error) {
+
+            console.error(
+                '売上入金更新エラー',
+                error
+            )
+
+            showMessageModal(
+                '更新に失敗しました',
+                (
+                    error.message
+                    || '時間をおいてもう一度お試しください。'
+                )
+            )
+
+        } finally {
+
+            saveButton.disabled = false
+            saveButton.textContent = '入金済みにする'
+        }
+    }
+
 
     // ===== グラフ読み込み =====
     async function loadCharts() {
