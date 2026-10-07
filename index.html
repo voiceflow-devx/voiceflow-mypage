@@ -650,6 +650,77 @@
         }
         .theme-switch button.active { background: var(--surface); color: var(--text); box-shadow: var(--shadow-soft); }
 
+        .toggle-switch {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            flex: 0 0 auto;
+            cursor: pointer;
+        }
+        .toggle-switch input {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+        .toggle-track {
+            width: 48px;
+            height: 28px;
+            padding: 3px;
+            border-radius: 999px;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            transition: .18s ease;
+        }
+        .toggle-thumb {
+            display: block;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--muted);
+            transition: .18s ease;
+        }
+        .toggle-switch input:checked + .toggle-track {
+            background: var(--text);
+            border-color: var(--text);
+        }
+        .toggle-switch input:checked + .toggle-track .toggle-thumb {
+            transform: translateX(20px);
+            background: var(--surface);
+        }
+        .toggle-switch input:focus-visible + .toggle-track {
+            outline: 3px solid color-mix(in srgb, var(--brand) 28%, transparent);
+            outline-offset: 2px;
+        }
+        .setting-select {
+            min-width: 132px;
+            min-height: 42px;
+            padding: 9px 36px 9px 12px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: var(--surface);
+            color: var(--text);
+            font: inherit;
+            font-size: 14px;
+            font-weight: 700;
+            outline: none;
+        }
+        .setting-select:focus {
+            border-color: var(--text);
+        }
+        .setting-select:disabled {
+            opacity: .45;
+            cursor: not-allowed;
+        }
+        .notification-preview {
+            margin-top: 12px;
+            padding: 12px 14px;
+            border-radius: 14px;
+            background: var(--surface-2);
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.65;
+        }
+
         .tax-warning-note {
             padding: 12px 14px;
             border-radius: 12px;
@@ -855,6 +926,8 @@
             .setting-row { align-items:flex-start; flex-direction:column; }
             .theme-switch { width:100%; }
             .theme-switch button { min-width:0; }
+            .setting-select { width:100%; }
+            .toggle-switch { align-self:flex-end; margin-top:-38px; }
         }
 
 </style>
@@ -1135,6 +1208,74 @@
                         <button id="themeDarkButton" type="button" onclick="setTheme('dark')">ダーク</button>
                     </div>
                 </div>
+            </div>
+
+            <div class="card">
+                <h2>通知</h2>
+
+                <div class="setting-row">
+                    <div>
+                        <div class="setting-title">毎日の経費入力リマインド</div>
+                        <div class="setting-note">1日1回、LINEで入力忘れを確認します。</div>
+                    </div>
+                    <label class="toggle-switch" aria-label="毎日の経費入力リマインドを切り替える">
+                        <input
+                            id="dailyExpenseReminderEnabled"
+                            type="checkbox"
+                            onchange="syncDailyExpenseReminderControls()"
+                        >
+                        <span class="toggle-track" aria-hidden="true">
+                            <span class="toggle-thumb"></span>
+                        </span>
+                    </label>
+                </div>
+
+                <div class="setting-row">
+                    <div>
+                        <div class="setting-title">通知時間</div>
+                        <div class="setting-note">日本時間・1時間単位で設定できます。初期設定は20:00です。</div>
+                    </div>
+                    <select id="dailyExpenseReminderTime" class="setting-select" aria-label="経費入力リマインド通知時間">
+                            <option value="00:00">00:00</option>
+                            <option value="01:00">01:00</option>
+                            <option value="02:00">02:00</option>
+                            <option value="03:00">03:00</option>
+                            <option value="04:00">04:00</option>
+                            <option value="05:00">05:00</option>
+                            <option value="06:00">06:00</option>
+                            <option value="07:00">07:00</option>
+                            <option value="08:00">08:00</option>
+                            <option value="09:00">09:00</option>
+                            <option value="10:00">10:00</option>
+                            <option value="11:00">11:00</option>
+                            <option value="12:00">12:00</option>
+                            <option value="13:00">13:00</option>
+                            <option value="14:00">14:00</option>
+                            <option value="15:00">15:00</option>
+                            <option value="16:00">16:00</option>
+                            <option value="17:00">17:00</option>
+                            <option value="18:00">18:00</option>
+                            <option value="19:00">19:00</option>
+                            <option value="20:00">20:00</option>
+                            <option value="21:00">21:00</option>
+                            <option value="22:00">22:00</option>
+                            <option value="23:00">23:00</option>
+                    </select>
+                </div>
+
+                <div id="dailyExpenseReminderPreview" class="notification-preview">
+                    毎日20:00ごろに「今日の経費入力はありませんか？」と通知します。
+                </div>
+
+                <button
+                    id="dailyExpenseReminderSaveButton"
+                    class="app-button primary"
+                    type="button"
+                    style="width:100%; margin-top:14px;"
+                    onclick="saveDailyExpenseReminderSettings()"
+                >
+                    通知設定を保存
+                </button>
             </div>
             
             <div class="card">
@@ -2575,6 +2716,100 @@
         triggerDownload('\uFEFF' + html, 'application/vnd.ms-excel;charset=utf-8;', `経費_${monthFilter || '全期間'}.xls`)
     }
 
+    // ===== 毎日の経費入力リマインド表示更新 =====
+    function syncDailyExpenseReminderControls() {
+        const enabledInput = document.getElementById(
+            'dailyExpenseReminderEnabled'
+        )
+        const timeSelect = document.getElementById(
+            'dailyExpenseReminderTime'
+        )
+        const preview = document.getElementById(
+            'dailyExpenseReminderPreview'
+        )
+
+        if (!enabledInput || !timeSelect || !preview) return
+
+        const enabled = enabledInput.checked
+        const time = timeSelect.value || '20:00'
+
+        timeSelect.disabled = !enabled
+
+        preview.textContent = enabled
+            ? `毎日${time}ごろに「今日の経費入力はありませんか？」とLINE通知します。`
+            : '毎日の経費入力リマインドはOFFです。'
+    }
+
+    // ===== 毎日の経費入力リマインド設定保存 =====
+    async function saveDailyExpenseReminderSettings() {
+        const enabledInput = document.getElementById(
+            'dailyExpenseReminderEnabled'
+        )
+        const timeSelect = document.getElementById(
+            'dailyExpenseReminderTime'
+        )
+        const saveButton = document.getElementById(
+            'dailyExpenseReminderSaveButton'
+        )
+
+        if (!enabledInput || !timeSelect || !saveButton) return
+
+        const enabled = enabledInput.checked
+        const time = timeSelect.value || '20:00'
+
+        if (!/^(?:[01]\d|2[0-3]):00$/.test(time)) {
+            showMessageModal(
+                '通知時間を確認してください',
+                '通知時間を1時間単位で選択してください。'
+            )
+            return
+        }
+
+        const originalText = saveButton.textContent
+        saveButton.disabled = true
+        saveButton.textContent = '保存中...'
+
+        try {
+            const result = await requestMypageApi(
+                '/api/mypage/settings/daily-expense-reminder',
+                'PATCH',
+                {
+                    enabled: enabled,
+                    time: time
+                }
+            )
+
+            currentSettings = {
+                ...(currentSettings || {}),
+                ...(result.settings || {})
+            }
+
+            await loadSettings()
+
+            showMessageModal(
+                '通知設定を保存しました',
+                enabled
+                    ? `毎日${time}ごろにLINEでお知らせします。`
+                    : '毎日の経費入力リマインドをOFFにしました。'
+            )
+
+        } catch (error) {
+            console.error(
+                '通知設定保存エラー',
+                error
+            )
+
+            showMessageModal(
+                '通知設定を保存できませんでした',
+                error.message || '時間をおいてもう一度お試しください。'
+            )
+
+        } finally {
+            saveButton.disabled = false
+            saveButton.textContent = originalText
+        }
+    }
+
     // ===== 設定読み込み =====
     async function loadSettings() {
 
@@ -2583,6 +2818,35 @@
         const data =
             currentSettings
             || {}
+
+        const reminderEnabledInput =
+            document.getElementById(
+                'dailyExpenseReminderEnabled'
+            )
+
+        const reminderTimeSelect =
+            document.getElementById(
+                'dailyExpenseReminderTime'
+            )
+
+        if (reminderEnabledInput) {
+            reminderEnabledInput.checked =
+                data.daily_expense_reminder_enabled !== false
+        }
+
+        if (reminderTimeSelect) {
+            const savedTime = String(
+                data.daily_expense_reminder_time
+                || '20:00'
+            )
+
+            reminderTimeSelect.value =
+                /^(?:[01]\d|2[0-3]):00$/.test(savedTime)
+                ? savedTime
+                : '20:00'
+        }
+
+        syncDailyExpenseReminderControls()
     
         const planInfo =
             document.getElementById(
