@@ -2,239 +2,285 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#ffffff">
     <title>管理画面</title>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <script>
+        (function () {
+            const saved = localStorage.getItem('voiceflow_theme');
+            const systemDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches;
+            const initial = saved || (systemDark ? 'dark' : 'light');
+            document.documentElement.dataset.theme = initial === 'dark' ? 'dark' : 'light';
+        })();
+    </script>
 
     <style>
-        * { box-sizing: border-box; }
+        :root {
+            color-scheme: light;
+            --bg: #f7f7f8;
+            --surface: #ffffff;
+            --surface-2: #fafafa;
+            --text: #101114;
+            --muted: #71717a;
+            --subtle: #a1a1aa;
+            --border: #e7e7ea;
+            --accent: #111111;
+            --accent-contrast: #ffffff;
+            --success-bg: #ecfdf3;
+            --success-text: #067647;
+            --error-bg: #fff1f2;
+            --error-text: #c01048;
+            --warning-bg: #fff7ed;
+            --warning-text: #c2410c;
+            --shadow: 0 8px 30px rgba(0,0,0,.06);
+            --shadow-soft: 0 1px 2px rgba(0,0,0,.04);
+            --radius-xl: 24px;
+            --radius-lg: 18px;
+            --radius-md: 14px;
+        }
 
+        :root[data-theme="dark"] {
+            color-scheme: dark;
+            --bg: #0b0b0d;
+            --surface: #151518;
+            --surface-2: #1c1c20;
+            --text: #f5f5f6;
+            --muted: #a1a1aa;
+            --subtle: #71717a;
+            --border: #2a2a30;
+            --accent: #f4f4f5;
+            --accent-contrast: #111113;
+            --success-bg: #0c2e21;
+            --success-text: #6ee7b7;
+            --error-bg: #3a121d;
+            --error-text: #fda4af;
+            --warning-bg: #3b2410;
+            --warning-text: #fdba74;
+            --shadow: 0 14px 40px rgba(0,0,0,.25);
+            --shadow-soft: 0 1px 2px rgba(0,0,0,.2);
+        }
+
+        * { box-sizing: border-box; }
+        html { background: var(--bg); }
         body {
             margin: 0;
             padding: 24px;
-            background: #f5f5f5;
-            color: #333;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            min-height: 100vh;
+            background: var(--bg);
+            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans JP", sans-serif;
+            transition: background .2s ease, color .2s ease;
         }
+        button, input { font: inherit; }
+        button { -webkit-tap-highlight-color: transparent; }
 
-        button { font: inherit; }
-
-        .container {
-            width: 100%;
-            max-width: 1200px;
-            margin: 40px auto;
-        }
-
+        .container { width: 100%; max-width: 1240px; margin: 20px auto 48px; }
         .card {
-            background: white;
-            border-radius: 16px;
-            padding: 24px;
-            box-shadow: 0 3px 16px rgba(0, 0, 0, 0.1);
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-xl);
+            padding: clamp(18px, 3vw, 30px);
+            box-shadow: var(--shadow-soft);
         }
-
-        h1 {
-            margin: 0 0 12px;
-            font-size: 24px;
-        }
-
-        .description {
+        .admin-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 18px;
             margin-bottom: 24px;
-            color: #777;
-            line-height: 1.6;
         }
+        .eyebrow {
+            color: var(--muted);
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: .12em;
+            margin-bottom: 6px;
+        }
+        h1 { margin: 0; font-size: clamp(24px, 4vw, 34px); letter-spacing: -.03em; }
+        h2 { margin: 0 0 14px; font-size: 18px; letter-spacing: -.02em; }
+        .description { margin-top: 8px; color: var(--muted); line-height: 1.6; font-size: 14px; }
+        .theme-toggle {
+            flex: 0 0 auto;
+            border: 1px solid var(--border);
+            background: var(--surface-2);
+            color: var(--text);
+            border-radius: 999px;
+            padding: 10px 14px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 700;
+        }
+        .theme-toggle:hover { filter: brightness(.97); }
 
         .status {
-            padding: 16px;
-            border-radius: 10px;
-            background: #f5f5f5;
-            line-height: 1.7;
+            padding: 13px 15px;
+            border-radius: var(--radius-md);
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            line-height: 1.6;
+            color: var(--muted);
+            font-size: 13px;
         }
+        .success { background: var(--success-bg); color: var(--success-text); border-color: transparent; }
+        .error { background: var(--error-bg); color: var(--error-text); border-color: transparent; }
+        .loading { color: var(--muted); }
+        .dashboard-content { display: none; margin-top: 20px; }
 
-        .success {
-            background: #e8f5e9;
-            color: #087f23;
+        .admin-tabs {
+            display: flex;
+            gap: 8px;
+            margin: 4px 0 24px;
+            overflow-x: auto;
+            scrollbar-width: none;
+            padding-bottom: 2px;
         }
-
-        .error {
-            background: #ffebee;
-            color: #c62828;
+        .admin-tabs::-webkit-scrollbar { display: none; }
+        .admin-tab {
+            padding: 10px 15px;
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            background: var(--surface);
+            color: var(--muted);
+            cursor: pointer;
+            font-weight: 700;
+            white-space: nowrap;
+            transition: .15s ease;
         }
-
-        .loading { color: #666; }
-
-        .dashboard-content {
-            display: none;
-            margin-top: 20px;
-        }
+        .admin-tab.active { background: var(--accent); color: var(--accent-contrast); border-color: var(--accent); }
+        .admin-panel { display: none; }
+        .admin-panel.active { display: block; }
 
         .metrics-grid {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 12px;
         }
-
         .metric-card {
             min-width: 0;
             padding: 18px 14px;
-            background: #fafafa;
-            border: 1px solid #eee;
-            border-radius: 12px;
-            text-align: center;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            text-align: left;
         }
+        .metric-label { margin-bottom: 8px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+        .metric-value { color: var(--text); font-size: clamp(24px, 4vw, 32px); font-weight: 800; line-height: 1.15; letter-spacing: -.03em; }
+        .metric-unit { margin-left: 2px; color: var(--muted); font-size: 12px; font-weight: 600; }
+        .updated-at { margin-top: 14px; color: var(--subtle); font-size: 12px; text-align: right; }
 
-        .metric-label {
-            margin-bottom: 8px;
-            color: #777;
-            font-size: 13px;
-            line-height: 1.5;
+        .admin-search {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            background: var(--surface-2);
+            color: var(--text);
+            font-size: 15px;
+            outline: none;
         }
+        .admin-search:focus { border-color: var(--text); box-shadow: 0 0 0 3px color-mix(in srgb, var(--text) 8%, transparent); }
+        .admin-search::placeholder { color: var(--subtle); }
 
-        .metric-value {
-            color: #222;
-            font-size: 30px;
-            font-weight: bold;
-            line-height: 1.2;
-        }
-
-        .metric-unit {
-            margin-left: 2px;
-            color: #777;
-            font-size: 13px;
-            font-weight: normal;
-        }
-
-        .updated-at {
-            margin-top: 16px;
-            color: #999;
-            font-size: 12px;
-            text-align: right;
-        }
-
-        .button-row {
-            display: flex;
-            gap: 10px;
-            margin-top: 20px;
-        }
-
-        .action-button {
-            flex: 1;
-            padding: 12px;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: bold;
-        }
-
-        .refresh-button {
-            background: #222;
-            color: white;
-        }
-
-        .back-button {
-            background: #eeeeee;
-            color: #555;
-        }
-
-        .action-button:disabled {
-            cursor: not-allowed;
-            opacity: 0.55;
-        }
-
-        .admin-tabs {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 20px;
-            overflow-x: auto;
-        }
-        
-        .admin-tab {
-            padding: 10px 16px;
-            border: 1px solid #ddd;
-            border-radius: 10px;
-            background: white;
-            color: #555;
-            cursor: pointer;
-            font-weight: bold;
-            white-space: nowrap;
-        }
-        
-        .admin-tab.active {
-            background: #222;
-            color: white;
-            border-color: #222;
-        }
-        
-        .admin-panel {
-            display: none;
-        }
-        
-        .admin-panel.active {
-            display: block;
-        }
-        
         .admin-table-wrap {
             width: 100%;
             overflow-x: auto;
-            margin-top: 16px;
+            margin-top: 14px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            background: var(--surface);
         }
-        
-        .admin-table {
-            width: 100%;
-            min-width: 1000px;
-            border-collapse: collapse;
-            font-size: 13px;
-        }
-        
-        .admin-table th,
-        .admin-table td {
-            padding: 10px;
-            border-bottom: 1px solid #eee;
-            text-align: left;
-            vertical-align: top;
-        }
-        
+        .admin-table { width: 100%; min-width: 1100px; border-collapse: separate; border-spacing: 0; font-size: 13px; }
+        .admin-table th, .admin-table td { padding: 12px 13px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
         .admin-table th {
-            background: #f5f5f5;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            background: var(--surface-2);
+            color: var(--muted);
+            white-space: nowrap;
+            font-size: 12px;
+            font-weight: 800;
+        }
+        .admin-table td { max-width: 250px; color: var(--text); word-break: break-word; }
+        .admin-table tbody tr:last-child td { border-bottom: 0; }
+        .admin-table tbody tr:hover td { background: color-mix(in srgb, var(--surface-2) 68%, transparent); }
+        .tax-pill {
+            display: inline-flex;
+            align-items: center;
+            border-radius: 999px;
+            padding: 4px 8px;
+            font-size: 11px;
+            font-weight: 800;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
             white-space: nowrap;
         }
-        
-        .admin-table td {
-            max-width: 240px;
-            word-break: break-word;
-        }
-        
-        .admin-search {
-            width: 100%;
-            padding: 11px 12px;
-            border: 1px solid #ddd;
-            border-radius: 10px;
-            font-size: 15px;
-        }
-        
-        @media (min-width: 720px) {
-            .metrics-grid {
-                grid-template-columns: repeat(4, minmax(0, 1fr));
-            }
-        }
+        .tax-pill.review { background: var(--warning-bg); color: var(--warning-text); border-color: transparent; }
 
-        @media (max-width: 480px) {
-            body { padding: 14px; }
-            .container { margin: 18px auto; }
-            .card { padding: 18px; }
-            .metric-value { font-size: 26px; }
-            .button-row { flex-direction: column; }
+        .button-row { display: flex; gap: 10px; margin-top: 22px; }
+        .action-button {
+            flex: 1;
+            padding: 13px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 800;
         }
-    </style>
+        .refresh-button { background: var(--accent); color: var(--accent-contrast); border-color: var(--accent); }
+        .back-button { background: var(--surface-2); color: var(--text); }
+        .action-button:disabled { cursor: not-allowed; opacity: .55; }
+
+        @media (min-width: 760px) { .metrics-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+        @media (min-width: 1040px) { .metrics-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+        @media (max-width: 600px) {
+            body { padding: 12px; }
+            .container { margin: 6px auto 28px; }
+            .card { border-radius: 20px; padding: 16px; }
+            .admin-header { align-items: center; }
+            .description { font-size: 13px; }
+            .theme-toggle { padding: 9px 11px; font-size: 12px; }
+            .button-row { flex-direction: column; }
+            .metrics-grid { gap: 8px; }
+            .metric-card { padding: 15px 12px; }
+        }
+    
+
+        /* Release UI — consistent with My Page */
+        :root {
+            --bg:#fafafa; --surface:#fff; --surface-2:#f4f4f5; --panel:#fff; --panel-2:#f4f4f5; --text:#0f0f10;
+            --muted:#737378; --subtle:#a1a1a8; --border:#dedee2; --accent:#0a0a0b; --accent-contrast:#fff; --brand:#06c755;
+            --danger:#ed4956; --warning:#d97706; --shadow:0 1px 2px rgba(0,0,0,.04);
+        }
+        :root[data-theme="dark"] {
+            --bg:#000; --surface:#101010; --surface-2:#1b1b1d; --panel:#101010; --panel-2:#1b1b1d; --text:#f5f5f5;
+            --muted:#a8a8ad; --subtle:#6f6f75; --border:#29292d; --accent:#fff; --accent-contrast:#101010; --brand:#20d968;
+            --danger:#ff5964; --warning:#f6a623; --shadow:none;
+        }
+        body { background:var(--bg); color:var(--text); font-feature-settings:"palt" 1; }
+        .header { background:color-mix(in srgb,var(--panel) 93%,transparent); border-bottom:1px solid var(--border); backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px); }
+        .header h1 { letter-spacing:-.03em; }
+        .card, .stat-card, .panel { background:var(--panel); border:1px solid var(--border); box-shadow:var(--shadow); }
+        button, .btn { border-radius:11px; }
+        input, select, textarea { background:var(--panel); color:var(--text); border-color:var(--border); }
+        .theme-switch { background:var(--panel-2); border-color:var(--border); border-radius:999px; }
+        .theme-switch button { border-radius:999px; }
+        .theme-switch button.active { background:var(--text); color:var(--panel); }
+
+</style>
 </head>
 
 <body>
     <div class="container">
         <div class="card">
-            <h1>管理ダッシュボード</h1>
-
-            <div class="description">
-                ユーザー数や経費登録状況を確認できます。
+            <div class="admin-header">
+                <div>
+                    <div class="eyebrow">VOICEFLOW ADMIN</div>
+                    <h1>管理ダッシュボード</h1>
+                    <div class="description">ユーザー・経費・操作履歴を安全に確認します。</div>
+                </div>
+                <button id="adminThemeToggle" class="theme-toggle" type="button" onclick="toggleAdminTheme()">ダーク</button>
             </div>
 
             <div id="status" class="status loading">
@@ -368,7 +414,7 @@
                         id="currentExpensesSearch"
                         class="admin-search"
                         type="text"
-                        placeholder="支払先・内容・科目・メモ・ユーザーIDで検索"
+                        placeholder="支払先・内容・科目・税区分・メモ・ユーザーIDで検索"
                         oninput="renderCurrentExpenses()"
                     >
                 
@@ -389,6 +435,7 @@
                                     <th>内容</th>
                                     <th>金額</th>
                                     <th>勘定科目</th>
+                                    <th>税区分</th>
                                     <th>支払方法</th>
                                     <th>メモ</th>
                                     <th>ユーザーID</th>
@@ -397,7 +444,7 @@
                 
                             <tbody id="currentExpensesBody">
                                 <tr>
-                                    <td colspan="8">
+                                    <td colspan="9">
                                         読み込み前です
                                     </td>
                                 </tr>
@@ -416,7 +463,7 @@
                         id="deletedExpensesSearch"
                         class="admin-search"
                         type="text"
-                        placeholder="支払先・内容・科目・メモ・ユーザーIDで検索"
+                        placeholder="支払先・内容・科目・税区分・メモ・ユーザーIDで検索"
                         oninput="renderDeletedExpenses()"
                     >
                 
@@ -438,6 +485,7 @@
                                     <th>内容</th>
                                     <th>金額</th>
                                     <th>勘定科目</th>
+                                    <th>税区分</th>
                                     <th>支払方法</th>
                                     <th>メモ</th>
                                     <th>削除元</th>
@@ -447,7 +495,7 @@
                 
                             <tbody id="deletedExpensesBody">
                                 <tr>
-                                    <td colspan="10">
+                                    <td colspan="11">
                                         読み込み前です
                                     </td>
                                 </tr>
@@ -528,6 +576,27 @@
         // ===== LIFF ID =====
         const LIFF_ID =
             '2010043850-PaxG9LLM'
+
+        const THEME_STORAGE_KEY = 'voiceflow_theme'
+
+        function applyAdminTheme(theme) {
+            const normalized = theme === 'dark' ? 'dark' : 'light'
+            document.documentElement.dataset.theme = normalized
+            localStorage.setItem(THEME_STORAGE_KEY, normalized)
+            const meta = document.querySelector('meta[name="theme-color"]')
+            if (meta) meta.setAttribute('content', normalized === 'dark' ? '#000000' : '#ffffff')
+
+            const button = document.getElementById('adminThemeToggle')
+            if (button) {
+                button.textContent = normalized === 'dark' ? 'ライト' : 'ダーク'
+                button.setAttribute('aria-label', normalized === 'dark' ? 'ライトモードへ切り替え' : 'ダークモードへ切り替え')
+            }
+        }
+
+        function toggleAdminTheme() {
+            const current = document.documentElement.dataset.theme || 'light'
+            applyAdminTheme(current === 'dark' ? 'light' : 'dark')
+        }
 
         let currentExpenses = []
         let deletedExpenses = []
@@ -942,6 +1011,7 @@
                             record.item,
                             record.amount,
                             record.account,
+                            record.tax_category,
                             record.payment,
                             record.memo
                         ]
@@ -969,7 +1039,7 @@
         
                 body.innerHTML = `
                     <tr>
-                        <td colspan="8">
+                        <td colspan="9">
                             該当する経費はありません
                         </td>
                     </tr>
@@ -1001,6 +1071,12 @@
         
                         <td>
                             ${escapeHtml(record.account || '-')}
+                        </td>
+
+                        <td>
+                            <span class="tax-pill ${(record.tax_category || '要確認') === '要確認' ? 'review' : ''}">
+                                ${escapeHtml(record.tax_category || '要確認')}
+                            </span>
                         </td>
         
                         <td>
@@ -1090,6 +1166,7 @@
                             record.item,
                             record.amount,
                             record.account,
+                            record.tax_category,
                             record.payment,
                             record.memo,
                             record.deleted_from
@@ -1118,7 +1195,7 @@
         
                 body.innerHTML = `
                     <tr>
-                        <td colspan="10">
+                        <td colspan="11">
                             削除済み経費はありません
                         </td>
                     </tr>
@@ -1154,6 +1231,12 @@
         
                         <td>
                             ${escapeHtml(record.account || '-')}
+                        </td>
+
+                        <td>
+                            <span class="tax-pill ${(record.tax_category || '要確認') === '要確認' ? 'review' : ''}">
+                                ${escapeHtml(record.tax_category || '要確認')}
+                            </span>
                         </td>
         
                         <td>
@@ -1321,6 +1404,7 @@
                 ['item', '内容'],
                 ['amount', '金額'],
                 ['account', '勘定科目'],
+                ['tax_category', '税区分'],
                 ['payment', '支払方法'],
                 ['memo', 'メモ']
             ]
@@ -1560,6 +1644,8 @@
 
         // ===== 初期化 =====
         async function initAdminPage() {
+            applyAdminTheme(localStorage.getItem(THEME_STORAGE_KEY) || 'light')
+
             try {
                 await liff.init({
                     liffId: LIFF_ID
