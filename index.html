@@ -1235,7 +1235,7 @@
                         <div class="setting-title">通知時間</div>
                         <div class="setting-note">日本時間・1時間単位で設定できます。初期設定は20:00です。</div>
                     </div>
-                    <select id="dailyExpenseReminderTime" class="setting-select" aria-label="経費入力リマインド通知時間">
+                    <select id="dailyExpenseReminderTime" class="setting-select" aria-label="経費入力リマインド通知時間" onchange="syncDailyExpenseReminderControls()">
                             <option value="00:00">00:00</option>
                             <option value="01:00">01:00</option>
                             <option value="02:00">02:00</option>
@@ -1264,7 +1264,7 @@
                 </div>
 
                 <div id="dailyExpenseReminderPreview" class="notification-preview">
-                    毎日20:00ごろに「今日の経費入力はありませんか？」と通知します。
+                    毎日20:00ごろに確認します。当日に経費を1件以上登録済みの場合は通知しません。
                 </div>
 
                 <button
@@ -1274,7 +1274,54 @@
                     style="width:100%; margin-top:14px;"
                     onclick="saveDailyExpenseReminderSettings()"
                 >
-                    通知設定を保存
+                    経費通知設定を保存
+                </button>
+
+                <div class="setting-row" style="margin-top:22px; padding-top:18px; border-top:1px solid var(--border);">
+                    <div>
+                        <div class="setting-title">入金確認通知</div>
+                        <div class="setting-note">未入金の売上を確認する時間です。初期設定は12:00です。</div>
+                    </div>
+                    <select id="incomeReminderTime" class="setting-select" aria-label="入金確認通知時間" onchange="syncIncomeReminderControls()">
+                            <option value="00:00">00:00</option>
+                            <option value="01:00">01:00</option>
+                            <option value="02:00">02:00</option>
+                            <option value="03:00">03:00</option>
+                            <option value="04:00">04:00</option>
+                            <option value="05:00">05:00</option>
+                            <option value="06:00">06:00</option>
+                            <option value="07:00">07:00</option>
+                            <option value="08:00">08:00</option>
+                            <option value="09:00">09:00</option>
+                            <option value="10:00">10:00</option>
+                            <option value="11:00">11:00</option>
+                            <option value="12:00">12:00</option>
+                            <option value="13:00">13:00</option>
+                            <option value="14:00">14:00</option>
+                            <option value="15:00">15:00</option>
+                            <option value="16:00">16:00</option>
+                            <option value="17:00">17:00</option>
+                            <option value="18:00">18:00</option>
+                            <option value="19:00">19:00</option>
+                            <option value="20:00">20:00</option>
+                            <option value="21:00">21:00</option>
+                            <option value="22:00">22:00</option>
+                            <option value="23:00">23:00</option>
+                    </select>
+                </div>
+
+                <div id="incomeReminderPreview" class="notification-preview">
+                    未入金の売上は、入金予定日の12:00ごろに確認します。
+                </div>
+
+                <button
+                    id="incomeReminderSaveButton"
+                    class="app-button primary"
+                    type="button"
+                    style="width:100%; margin-top:14px;"
+                    onclick="saveIncomeReminderSettings()"
+                >
+                    入金確認通知の時間を保存
                 </button>
             </div>
             
@@ -2736,7 +2783,7 @@
         timeSelect.disabled = !enabled
 
         preview.textContent = enabled
-            ? `毎日${time}ごろに「今日の経費入力はありませんか？」とLINE通知します。`
+            ? `毎日${time}ごろに確認します。当日に経費を1件以上登録済みの場合は通知しません。`
             : '毎日の経費入力リマインドはOFFです。'
     }
 
@@ -2789,7 +2836,7 @@
             showMessageModal(
                 '通知設定を保存しました',
                 enabled
-                    ? `毎日${time}ごろにLINEでお知らせします。`
+                    ? `毎日${time}ごろに確認します。当日に経費登録済みの場合は通知しません。`
                     : '毎日の経費入力リマインドをOFFにしました。'
             )
 
@@ -2799,6 +2846,70 @@
                 error
             )
 
+            showMessageModal(
+                '通知設定を保存できませんでした',
+                error.message || '時間をおいてもう一度お試しください。'
+            )
+
+        } finally {
+            saveButton.disabled = false
+            saveButton.textContent = originalText
+        }
+    }
+
+    // ===== 入金確認通知の表示更新 =====
+    function syncIncomeReminderControls() {
+        const timeSelect = document.getElementById('incomeReminderTime')
+        const preview = document.getElementById('incomeReminderPreview')
+
+        if (!timeSelect || !preview) return
+
+        const time = timeSelect.value || '12:00'
+        preview.textContent = `未入金の売上は、入金予定日の${time}ごろに確認します。入金予定日がない場合は登録から約7日後の${time}ごろです。`
+    }
+
+    // ===== 入金確認通知の時刻保存 =====
+    async function saveIncomeReminderSettings() {
+        const timeSelect = document.getElementById('incomeReminderTime')
+        const saveButton = document.getElementById('incomeReminderSaveButton')
+
+        if (!timeSelect || !saveButton) return
+
+        const time = timeSelect.value || '12:00'
+
+        if (!/^(?:[01]\d|2[0-3]):00$/.test(time)) {
+            showMessageModal(
+                '通知時間を確認してください',
+                '通知時間を1時間単位で選択してください。'
+            )
+            return
+        }
+
+        const originalText = saveButton.textContent
+        saveButton.disabled = true
+        saveButton.textContent = '保存中...'
+
+        try {
+            const result = await requestMypageApi(
+                '/api/mypage/settings/income-reminder',
+                'PATCH',
+                { time: time }
+            )
+
+            currentSettings = {
+                ...(currentSettings || {}),
+                ...(result.settings || {})
+            }
+
+            syncIncomeReminderControls()
+
+            showMessageModal(
+                '入金確認通知の時間を保存しました',
+                `未入金の確認は${time}ごろに行います。`
+            )
+
+        } catch (error) {
+            console.error('入金確認通知設定保存エラー', error)
             showMessageModal(
                 '通知設定を保存できませんでした',
                 error.message || '時間をおいてもう一度お試しください。'
@@ -2846,7 +2957,23 @@
                 : '20:00'
         }
 
+        const incomeReminderTimeSelect =
+            document.getElementById('incomeReminderTime')
+
+        if (incomeReminderTimeSelect) {
+            const savedIncomeTime = String(
+                data.income_reminder_time
+                || '12:00'
+            )
+
+            incomeReminderTimeSelect.value =
+                /^(?:[01]\d|2[0-3]):00$/.test(savedIncomeTime)
+                ? savedIncomeTime
+                : '12:00'
+        }
+
         syncDailyExpenseReminderControls()
+        syncIncomeReminderControls()
     
         const planInfo =
             document.getElementById(
