@@ -6,6 +6,8 @@
     <meta name="theme-color" content="#ffffff">
     <title>帳簿マイページ</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/encoding-japanese@2.2.0/encoding.min.js"></script>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script>
         (() => {
@@ -930,6 +932,61 @@
             .toggle-switch { align-self:flex-end; margin-top:-38px; }
         }
 
+
+        .export-choice-grid {
+            display:grid;
+            grid-template-columns:1fr;
+            gap:10px;
+            margin-top:14px;
+        }
+        .export-choice {
+            width:100%;
+            padding:14px 15px;
+            border:1px solid var(--border);
+            border-radius:13px;
+            background:var(--surface);
+            color:var(--text);
+            text-align:left;
+            cursor:pointer;
+            transition:.16s ease;
+        }
+        .export-choice:hover {
+            background:var(--surface-2);
+            transform:translateY(-1px);
+        }
+        .export-choice-title {
+            display:block;
+            font-size:14px;
+            font-weight:800;
+            margin-bottom:3px;
+        }
+        .export-choice-note {
+            display:block;
+            font-size:12px;
+            line-height:1.55;
+            color:var(--muted);
+            font-weight:500;
+        }
+        .export-footnote {
+            margin-top:14px;
+            padding:12px;
+            border-radius:11px;
+            background:var(--surface-2);
+            color:var(--muted);
+            font-size:11.5px;
+            line-height:1.65;
+        }
+        .pc-login-url {
+            margin-top:12px;
+            padding:11px 12px;
+            border:1px solid var(--border);
+            border-radius:10px;
+            background:var(--surface-2);
+            color:var(--muted);
+            font-size:12px;
+            word-break:break-all;
+            user-select:all;
+        }
 </style>
        
 </head>
@@ -939,7 +996,7 @@
 <div id="loginPage" class="login-page">
     <div class="login-card">
         <h1>経費マイページ</h1>
-        <p>LINEアカウントでログインして<br>経費データを確認できます</p>
+        <p>LINEアカウントでログインして<br>経費データを確認できます<br><span style="display:inline-block;margin-top:8px;font-size:12px;color:var(--muted);">スマホ・PCどちらからでも同じLINEアカウントで利用できます</span></p>
         <button class="login-btn" onclick="initLiff()">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
@@ -1185,11 +1242,14 @@
                     </select>
                 </div>
                 <button class="export-btn btn-csv" onclick="exportCSV()">
-                    📄 CSVダウンロード
+                    📄 汎用CSVダウンロード
                 </button>
-                <button class="export-btn btn-excel" onclick="exportExcel()">
-                    📊 Excelダウンロード
+                <button class="export-btn btn-excel" onclick="openAccountingExportModal()">
+                    📊 Excel・会計ソフト出力
                 </button>
+                <div class="setting-note" style="margin-top:4px;line-height:1.7;">
+                    スマホからも出力できます。スマホでは共有／ファイル保存画面が開く場合があります。
+                </div>
             </div>
         </div>
 
@@ -1388,6 +1448,20 @@
         </div>
             
             <div class="card">
+                <h2>PCから利用</h2>
+                <div class="setting-row">
+                    <div>
+                        <div class="setting-title">PC版マイページ</div>
+                        <div class="setting-note">PCのブラウザでも、スマホと同じLINEアカウントでログインできます。</div>
+                    </div>
+                </div>
+                <div id="pcLoginUrlText" class="pc-login-url">https://liff.line.me/2010043850-PaxG9LLM</div>
+                <button class="app-button primary" type="button" style="width:100%;margin-top:12px;" onclick="copyPcLoginUrl()">
+                    PCログインURLをコピー
+                </button>
+            </div>
+
+            <div class="card">
                 <h2>ログアウト</h2>
                 <button class="app-button" style="width:100%;" onclick="logout()">
                     ログアウト
@@ -1543,6 +1617,44 @@
             >
                 入金済みにする
             </button>
+        </div>
+    </div>
+</div>
+
+<!-- Excel・会計ソフト出力モーダル -->
+<div id="accountingExportModal" class="modal-bg">
+    <div class="modal-box">
+        <div class="modal-title">出力形式を選択</div>
+        <div class="modal-note">
+            選択中の期間の経費を出力します。会計ソフトへ直接取り込む場合は、そのソフト用の形式を選んでください。
+        </div>
+
+        <div class="export-choice-grid">
+            <button class="export-choice" type="button" onclick="exportAccountingFile('generic_xlsx')">
+                <span class="export-choice-title">汎用Excel（.xlsx）</span>
+                <span class="export-choice-note">一覧保存・税理士への共有・Excel編集向け</span>
+            </button>
+            <button class="export-choice" type="button" onclick="exportAccountingFile('freee_xlsx')">
+                <span class="export-choice-title">freee用 Excel（.xlsx）</span>
+                <span class="export-choice-note">freee会計「エクセルインポート」向け</span>
+            </button>
+            <button class="export-choice" type="button" onclick="exportAccountingFile('mf_csv')">
+                <span class="export-choice-title">マネーフォワード用（.csv）</span>
+                <span class="export-choice-note">クラウド会計・確定申告の「仕訳帳」インポート向け</span>
+            </button>
+            <button class="export-choice" type="button" onclick="exportAccountingFile('yayoi_csv')">
+                <span class="export-choice-title">弥生会計用（.csv / Shift-JIS）</span>
+                <span class="export-choice-note">弥生取り込み形式。弥生会計・弥生会計オンライン向け</span>
+            </button>
+        </div>
+
+        <div class="export-footnote">
+            クレジットカード・電子マネーは貸方「未払金」、現金は「現金」、普通預金は「普通預金」、事業主借は「事業主借」として出力します。
+            インボイスの適格／経過措置区分は現在の経費データに専用項目がないため、会計ソフト側で最終確認してください。
+        </div>
+
+        <div class="modal-buttons">
+            <button class="btn-cancel" type="button" onclick="closeAccountingExportModal()">閉じる</button>
         </div>
     </div>
 </div>
@@ -1866,6 +1978,28 @@
     
     // ===== LIFF 初期化 =====
     const LIFF_ID = '2010043850-PaxG9LLM'
+    const PC_LOGIN_URL = `https://liff.line.me/${LIFF_ID}`
+
+    async function copyPcLoginUrl() {
+        try {
+            if (navigator.clipboard?.writeText) {
+                await navigator.clipboard.writeText(PC_LOGIN_URL)
+            } else {
+                const input = document.createElement('textarea')
+                input.value = PC_LOGIN_URL
+                input.style.position = 'fixed'
+                input.style.opacity = '0'
+                document.body.appendChild(input)
+                input.select()
+                document.execCommand('copy')
+                input.remove()
+            }
+            showMessageModal('コピーしました', 'PCのブラウザに貼り付けて、同じLINEアカウントでログインしてください。')
+        } catch (error) {
+            showMessageModal('コピーできませんでした', `このURLをPCで開いてください。<br>${escapeHtml(PC_LOGIN_URL)}`)
+        }
+    }
+
 
     async function initLiff() {
 
@@ -2703,13 +2837,21 @@
     }
 
     function ensureExportReady(records) {
+        if (!records.length) {
+            showMessageModal('出力するデータがありません', '選択した期間に経費データがありません。')
+            return false
+        }
+
         const needsReview = records.filter(r =>
-            !r.account || r.account === '要確認' || !r.tax_category || r.tax_category === '要確認'
+            !r.account || r.account === '要確認' ||
+            !r.tax_category || r.tax_category === '要確認' ||
+            !r.payment
         )
+
         if (needsReview.length > 0) {
             showMessageModal(
                 '確認が必要なデータがあります',
-                `${needsReview.length}件の勘定科目または税区分が「要確認」です。<br>一覧で修正してから出力してください。`
+                `${needsReview.length}件の勘定科目・税区分・支払方法のいずれかが未確定です。<br>一覧で修正してから出力してください。`
             )
             return false
         }
@@ -2721,46 +2863,298 @@
         return `"${text.replace(/"/g, '""')}"`
     }
 
-    function triggerDownload(content, mime, filename) {
-        const blob = new Blob([content], { type: mime })
+    function toSlashDate(value) {
+        const text = String(value || '').trim()
+        const m = text.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/)
+        if (!m) return text.replace(/-/g, '/')
+        return `${m[1]}/${String(m[2]).padStart(2, '0')}/${String(m[3]).padStart(2, '0')}`
+    }
+
+    function exportDescription(record) {
+        return [record.store, record.item].filter(Boolean).join(' / ')
+    }
+
+    function paymentToContraAccount(payment) {
+        const map = {
+            '現金': '現金',
+            '普通預金': '普通預金',
+            'クレジットカード': '未払金',
+            '事業主借': '事業主借',
+            '電子マネー': '未払金'
+        }
+        return map[payment] || '要確認'
+    }
+
+    function freeeTaxCategory(value) {
+        const map = {
+            '課税仕入10%': '課対仕入10%',
+            '課税仕入8%（軽減）': '課対仕入8%（軽）',
+            '非課税': '非課仕入',
+            '不課税': '対象外',
+            '対象外': '対象外'
+        }
+        return map[value] || value || '要確認'
+    }
+
+    function moneyForwardTaxCategory(value) {
+        const map = {
+            '課税仕入10%': '課仕 10%',
+            '課税仕入8%（軽減）': '課仕 (軽)8%',
+            '非課税': '非仕',
+            '不課税': '対象外仕',
+            '対象外': '対象外仕'
+        }
+        return map[value] || value || '要確認'
+    }
+
+    function yayoiTaxCategory(value) {
+        const map = {
+            '課税仕入10%': '課対仕入込10%',
+            '課税仕入8%（軽減）': '課対仕入込軽減8%',
+            '非課税': '非課仕入',
+            '不課税': '対外仕入',
+            '対象外': '対外仕入'
+        }
+        return map[value] || value || '不明'
+    }
+
+    function isTaxablePurchase(value) {
+        return value === '課税仕入10%' || value === '課税仕入8%（軽減）'
+    }
+
+    function safeSheetName(name) {
+        return String(name || '経費').replace(/[\\/?*\[\]:]/g, '_').slice(0, 31) || '経費'
+    }
+
+    async function saveBlobToDevice(blob, filename) {
+        const file = new File([blob], filename, { type: blob.type || 'application/octet-stream' })
+        const mobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+
+        if (mobile && navigator.share && navigator.canShare) {
+            try {
+                if (navigator.canShare({ files: [file] })) {
+                    await navigator.share({ files: [file], title: filename })
+                    return
+                }
+            } catch (error) {
+                if (error?.name === 'AbortError') return
+                console.warn('共有画面を開けなかったため通常ダウンロードへ切り替えます', error)
+            }
+        }
+
         const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = url
         a.download = filename
+        a.rel = 'noopener'
         document.body.appendChild(a)
         a.click()
         a.remove()
-        setTimeout(() => URL.revokeObjectURL(url), 1000)
+        setTimeout(() => URL.revokeObjectURL(url), 3000)
     }
 
-    // ===== CSV出力 =====
-    function exportCSV() {
-        const { monthFilter, filtered } = getExportTargetRecords()
-        if (!ensureExportReady(filtered)) return
+    function makeCsvBlob(rows, encoding = 'utf8') {
+        const csv = rows.map(row => row.map(csvCell).join(',')).join('\r\n')
 
-        const header = ['日付','支払先','内容','金額','勘定科目','税区分','支払方法','メモ']
-        const rows = filtered.map(r => [
-            r.date, r.store, r.item, Number(r.amount || 0), r.account,
-            r.tax_category, r.payment, r.memo
-        ].map(csvCell).join(','))
+        if (encoding === 'sjis') {
+            if (typeof Encoding === 'undefined') {
+                throw new Error('Shift-JIS変換ライブラリを読み込めませんでした。通信状態を確認して再読み込みしてください。')
+            }
+            const unicode = Encoding.stringToCode(csv)
+            const sjis = Encoding.convert(unicode, { to: 'SJIS', from: 'UNICODE' })
+            return new Blob([new Uint8Array(sjis)], { type: 'text/csv;charset=shift_jis' })
+        }
 
-        const csv = '\uFEFF' + [header.map(csvCell).join(','), ...rows].join('\r\n')
-        triggerDownload(csv, 'text/csv;charset=utf-8;', `経費_${monthFilter || '全期間'}.csv`)
+        return new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' })
     }
 
-    // ===== Excel互換出力 =====
-    function exportExcel() {
-        const { monthFilter, filtered } = getExportTargetRecords()
-        if (!ensureExportReady(filtered)) return
+    function makeXlsxBlob(rows, sheetName = '経費') {
+        if (typeof XLSX === 'undefined') {
+            throw new Error('Excel作成ライブラリを読み込めませんでした。通信状態を確認して再読み込みしてください。')
+        }
 
-        const escapeCell = value => escapeHtml(String(value ?? ''))
-        let html = '<html><head><meta charset="UTF-8"></head><body><table border="1"><tr>' +
-            '<th>日付</th><th>支払先</th><th>内容</th><th>金額</th><th>勘定科目</th><th>税区分</th><th>支払方法</th><th>メモ</th></tr>'
-        filtered.forEach(r => {
-            html += `<tr><td>${escapeCell(r.date)}</td><td>${escapeCell(r.store)}</td><td>${escapeCell(r.item)}</td><td>${Number(r.amount || 0)}</td><td>${escapeCell(r.account)}</td><td>${escapeCell(r.tax_category)}</td><td>${escapeCell(r.payment)}</td><td>${escapeCell(r.memo)}</td></tr>`
+        const worksheet = XLSX.utils.aoa_to_sheet(rows)
+        worksheet['!cols'] = rows[0].map((_, colIndex) => {
+            const max = rows.reduce((n, row) => Math.max(n, String(row[colIndex] ?? '').length), 8)
+            return { wch: Math.min(Math.max(max + 2, 10), 36) }
         })
-        html += '</table></body></html>'
-        triggerDownload('\uFEFF' + html, 'application/vnd.ms-excel;charset=utf-8;', `経費_${monthFilter || '全期間'}.xls`)
+        const workbook = XLSX.utils.book_new()
+        XLSX.utils.book_append_sheet(workbook, worksheet, safeSheetName(sheetName))
+        const bytes = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' })
+        return new Blob(
+            [bytes],
+            { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }
+        )
+    }
+
+    function openAccountingExportModal() {
+        const { filtered } = getExportTargetRecords()
+        if (!ensureExportReady(filtered)) return
+        document.getElementById('accountingExportModal').classList.add('show')
+    }
+
+    function closeAccountingExportModal() {
+        document.getElementById('accountingExportModal').classList.remove('show')
+    }
+
+    // ===== 汎用CSV出力 =====
+    async function exportCSV() {
+        const { monthFilter, filtered } = getExportTargetRecords()
+        if (!ensureExportReady(filtered)) return
+
+        const rows = [
+            ['日付','支払先','内容','金額','勘定科目','税区分','支払方法','メモ'],
+            ...filtered.map(r => [
+                r.date, r.store, r.item, Number(r.amount || 0), r.account,
+                r.tax_category, r.payment, r.memo
+            ])
+        ]
+
+        await saveBlobToDevice(
+            makeCsvBlob(rows, 'utf8'),
+            `経費_${monthFilter || '全期間'}.csv`
+        )
+    }
+
+    // ===== Excel・会計ソフト出力 =====
+    async function exportAccountingFile(format) {
+        const { monthFilter, filtered } = getExportTargetRecords()
+        if (!ensureExportReady(filtered)) return
+
+        const period = monthFilter || '全期間'
+
+        try {
+            let blob
+            let filename
+
+            if (format === 'generic_xlsx') {
+                const rows = [
+                    ['日付','支払先','内容','金額','勘定科目','税区分','支払方法','メモ'],
+                    ...filtered.map(r => [
+                        toSlashDate(r.date), r.store || '', r.item || '', Number(r.amount || 0),
+                        r.account || '', r.tax_category || '', r.payment || '', r.memo || ''
+                    ])
+                ]
+                blob = makeXlsxBlob(rows, '経費')
+                filename = `経費_${period}.xlsx`
+
+            } else if (format === 'freee_xlsx') {
+                // freee会計「エクセルインポート > 振替伝票データ」向け。
+                // 税額列は空欄にし、freee側で「全ての金額が内税(税込)・税額自動計算あり」を選択する前提。
+                const rows = [
+                    ['発生日','借方勘定科目','借方税区分','借方金額','借方税額','貸方勘定科目','貸方税区分','貸方金額','貸方税額','借方摘要','貸方摘要','メモ'],
+                    ...filtered.map(r => {
+                        const desc = exportDescription(r)
+                        return [
+                            toSlashDate(r.date),
+                            r.account || '',
+                            freeeTaxCategory(r.tax_category),
+                            Number(r.amount || 0),
+                            '',
+                            paymentToContraAccount(r.payment),
+                            '対象外',
+                            Number(r.amount || 0),
+                            '',
+                            desc,
+                            desc,
+                            r.memo || ''
+                        ]
+                    })
+                ]
+                blob = makeXlsxBlob(rows, 'freee仕訳')
+                filename = `freee_仕訳_${period}.xlsx`
+
+            } else if (format === 'mf_csv') {
+                // マネーフォワード公式「仕訳帳」サンプルフォーマット A～AA。
+                // インボイス専用情報を本システムで保持していない課税仕入は「要確認」として
+                // インポート時のマッチング画面で利用者に確認させる。
+                const header = [
+                    '取引No','取引日','借方勘定科目','借方補助科目','借方部門','借方取引先',
+                    '借方税区分','借方インボイス','借方金額(円)','借方税額',
+                    '貸方勘定科目','貸方補助科目','貸方部門','貸方取引先',
+                    '貸方税区分','貸方インボイス','貸方金額(円)','貸方税額',
+                    '摘要','仕訳メモ','タグ','MF仕訳タイプ','決算整理仕訳',
+                    '作成日時','作成者','最終更新日時','最終更新者'
+                ]
+
+                const rows = [
+                    header,
+                    ...filtered.map((r, i) => [
+                        i + 1,
+                        toSlashDate(r.date),
+                        r.account || '',
+                        '',
+                        '',
+                        r.store || '',
+                        moneyForwardTaxCategory(r.tax_category),
+                        isTaxablePurchase(r.tax_category) ? '要確認' : '',
+                        Number(r.amount || 0),
+                        '',
+                        paymentToContraAccount(r.payment),
+                        '',
+                        '',
+                        '',
+                        '対象外',
+                        '',
+                        Number(r.amount || 0),
+                        '',
+                        exportDescription(r),
+                        r.memo || '',
+                        '',
+                        'インポート',
+                        '',
+                        '', '', '', ''
+                    ])
+                ]
+                blob = makeCsvBlob(rows, 'utf8')
+                filename = `MoneyForward_仕訳_${period}.csv`
+
+            } else if (format === 'yayoi_csv') {
+                // 弥生取り込み形式（25項目・ヘッダーなし・Shift-JIS）。
+                const rows = filtered.map(r => [
+                    '2111',                     // 識別フラグ（1行伝票）
+                    '',                         // 伝票No.
+                    '',                         // 決算
+                    toSlashDate(r.date),        // 取引日付
+                    r.account || '',            // 借方勘定科目
+                    '',                         // 借方補助科目
+                    '',                         // 借方部門
+                    yayoiTaxCategory(r.tax_category),
+                    Number(r.amount || 0),       // 借方金額（税込）
+                    '',                         // 借方税金額（自動計算）
+                    paymentToContraAccount(r.payment),
+                    '',                         // 貸方補助科目
+                    '',                         // 貸方部門
+                    '対象外',                   // 貸方税区分
+                    Number(r.amount || 0),       // 貸方金額
+                    '',                         // 貸方税金額
+                    exportDescription(r),       // 摘要
+                    '',                         // 番号
+                    '',                         // 期日
+                    '0',                        // タイプ（仕訳データ）
+                    '',                         // 生成元
+                    r.memo || '',               // 仕訳メモ
+                    '0',                        // 付箋1
+                    '0',                        // 付箋2
+                    'no'                        // 調整
+                ])
+                blob = makeCsvBlob(rows, 'sjis')
+                filename = `弥生_仕訳_${period}.csv`
+
+            } else {
+                throw new Error('出力形式を選択できませんでした。')
+            }
+
+            closeAccountingExportModal()
+            await saveBlobToDevice(blob, filename)
+
+        } catch (error) {
+            console.error('会計ソフト出力エラー', error)
+            showMessageModal(
+                '出力に失敗しました',
+                error?.message || 'ページを再読み込みしてもう一度お試しください。'
+            )
+        }
     }
 
     // ===== 毎日の経費入力リマインド表示更新 =====
